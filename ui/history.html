@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>History - Publication Assistant</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  </head>
+  <body class="min-h-screen p-8 font-sans">
+    <div class="max-w-4xl mx-auto">
+      <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-bold">History</h1>
+        <a href="index.html" class="px-3 py-2 bg-slate-800 rounded text-sm"
+          >Back</a
+        >
+      </div>
+      <div
+        id="history-list"
+        class="bg-slate-900 p-6 rounded text-sm text-slate-200"
+      >
+        Loading...
+      </div>
+    </div>
+    <script>
+      const storedTheme = localStorage.getItem("theme");
+      if (storedTheme === "light")
+        document.documentElement.classList.remove("dark");
+      else document.documentElement.classList.add("dark");
+      async function loadHistory() {
+        try {
+          const res = await fetch("/api/history");
+          const j = await res.json();
+          const el = document.getElementById("history-list");
+          const entries = (j && j.entries) || [];
+          if (entries.length === 0) {
+            el.innerHTML = '<div class="text-slate-400">No history yet.</div>';
+            return;
+          }
+          el.innerHTML = entries
+            .map(
+              (e) =>
+                `<div class="p-3 bg-slate-800 rounded mb-2"><div class=\"text-xs text-slate-400\">${e.time || ""}</div><div class=\"font-semibold\">${e.title || e.summary || "Run"}</div><div class=\"text-xs text-slate-400\">${e.detail || ""}</div></div>`,
+            )
+            .join("");
+        } catch (e) {
+          document.getElementById("history-list").textContent =
+            "Failed to load history";
+        }
+      }
+      loadHistory();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Analytics - Publication Assistant</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  </head>
+  <body class="min-h-screen p-8 font-sans">
+    <div class="max-w-4xl mx-auto">
+      <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-bold">Analytics</h1>
+        <a href="index.html" class="px-3 py-2 bg-slate-800 rounded text-sm"
+          >Back</a
+        >
+      </div>
+      <div
+        id="analytics"
+        class="bg-slate-900 p-6 rounded text-sm text-slate-200"
+      >
+        <div style="height: 320px">
+          <canvas id="analyticsChart"></canvas>
+        </div>
+      </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+      const storedTheme = localStorage.getItem("theme");
+      if (storedTheme === "light")
+        document.documentElement.classList.remove("dark");
+      else document.documentElement.classList.add("dark");
+
+      async function load() {
+        try {
+          const res = await fetch("/api/analytics");
+          const j = await res.json();
+          const ctx = document
+            .getElementById("analyticsChart")
+            .getContext("2d");
+          new Chart(ctx, {
+            type: "bar",
+            data: {
+              labels: ["Projects"],
+              datasets: [
+                {
+                  label: "Count",
+                  data: [j.projects_count || 0],
+                  backgroundColor: ["#6366f1"],
+                },
+              ],
+            },
+            options: { responsive: true, maintainAspectRatio: false },
+          });
+        } catch (e) {
+          document.getElementById("analytics").textContent =
+            "Failed to load analytics";
+        }
+      }
+      load();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,274 @@
+<!doctype html>
+<html class="dark" lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Generate Article - Publication Assistant</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap"
+      rel="stylesheet"
+    />
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            fontFamily: { sans: ["Inter", "sans-serif"] },
+            colors: { brand: { border: "#334155" } },
+          },
+        },
+      };
+    </script>
+    <style>
+      body {
+        background-color: #0f172a;
+        color: #f1f5f9;
+      }
+    </style>
+  </head>
+  <body class="font-sans antialiased min-h-screen p-8">
+    <div class="max-w-5xl mx-auto">
+      <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-bold">Generate Article</h1>
+        <div class="flex gap-2">
+          <a href="index.html" class="px-3 py-2 bg-slate-800 rounded text-sm"
+            >Back</a
+          >
+        </div>
+        <div class="flex gap-2">
+          <a href="index.html" class="px-3 py-2 bg-slate-800 rounded text-sm"
+            >Back</a
+          >
+        </div>
+      </div>
+
+      <div class="bg-slate-900 p-6 rounded-lg border border-brand-border">
+        <div class="grid grid-cols-1 gap-4">
+          <div>
+            <label class="text-xs text-slate-300">Generation Goal</label>
+            <textarea
+              id="gen-goal"
+              class="w-full mt-1 p-3 bg-slate-800 rounded text-sm"
+              rows="4"
+              placeholder="E.g. Write an article..."
+            ></textarea>
+            <p class="text-xs text-slate-400 mt-2">
+              This generation will use the configuration set in
+              <a href="index.html" class="text-indigo-400">Configuration</a>.
+            </p>
+          </div>
+          <div
+            id="cfg-summary"
+            class="text-sm text-slate-300 bg-slate-800 p-3 rounded"
+          >
+            Loading configuration...
+          </div>
+        </div>
+
+        <div class="mt-6 flex items-center gap-4">
+          <button
+            id="gen-btn"
+            class="px-6 py-3 bg-indigo-600 rounded font-semibold"
+          >
+            Generate
+          </button>
+          <div id="gen-status" class="text-sm text-slate-400"></div>
+          <div id="gen-actions" class="ml-3 flex items-center gap-2"></div>
+        </div>
+      </div>
+
+      <div id="gen-output" class="mt-6 hidden">
+        <div class="bg-slate-900 p-6 rounded border border-brand-border">
+          <h2 id="out-title" class="text-xl font-bold mb-2"></h2>
+          <div id="out-tags" class="mb-4"></div>
+          <div
+            id="out-body"
+            class="prose max-w-none whitespace-pre-wrap text-slate-200"
+          ></div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        // Apply stored theme
+        const storedTheme = localStorage.getItem("theme");
+        if (storedTheme === "light")
+          document.documentElement.classList.remove("dark");
+        else document.documentElement.classList.add("dark");
+
+        // Load configuration from localStorage
+        const CFG_KEY = "pa_config";
+        function loadConfig() {
+          try {
+            return JSON.parse(localStorage.getItem(CFG_KEY) || "{}");
+          } catch (e) {
+            return {};
+          }
+        }
+        const cfg = loadConfig();
+        // show summary
+        (function showSummary() {
+          const s = document.getElementById("cfg-summary");
+          if (!s) return;
+          const repo = cfg.repo_url || "Not set";
+          const style = cfg.style || "Technical Blog";
+          const length = cfg.length || "Medium";
+          const model = cfg.model || "Gemini 1.5 Flash Latest (Google)";
+          const uploads = (cfg.uploads || []).length;
+          s.innerHTML = `<div class="font-semibold">Repository:</div><div class="text-xs text-slate-400 mb-2">${repo}</div><div class=\"font-semibold\">Style</div><div class=\"text-xs text-slate-400\">${style} • ${length} • ${model}</div><div class=\"text-xs text-slate-400 mt-2\">Uploaded files: ${uploads}</div>`;
+        })();
+
+        // Add UI toggle button (open Gradio or return to web)
+        (function addUiToggle() {
+          const container = document.querySelector(".flex.gap-2");
+          if (!container) return;
+          const btn = document.createElement("button");
+          btn.id = "ui-toggle";
+          btn.className =
+            "px-3 py-2 border rounded text-sm hover:bg-slate-800 flex items-center gap-2";
+          const label = document.createElement("span");
+          label.id = "ui-toggle-label";
+          label.textContent =
+            localStorage.getItem("ui_pref") === "gradio" ? "Web" : "Gradio";
+          btn.appendChild(label);
+          btn.addEventListener("click", () => {
+            const cur = localStorage.getItem("ui_pref") || "web";
+            if (cur === "web") {
+              window.open("http://localhost:7860", "_blank");
+              localStorage.setItem("ui_pref", "gradio");
+              label.textContent = "Web";
+            } else {
+              localStorage.setItem("ui_pref", "web");
+              label.textContent = "Gradio";
+              window.location.href = "index.html";
+            }
+          });
+          container.appendChild(btn);
+        })();
+
+        const genBtn = document.getElementById("gen-btn");
+        const status = document.getElementById("gen-status");
+        const out = document.getElementById("gen-output");
+        const outTitle = document.getElementById("out-title");
+        const outTags = document.getElementById("out-tags");
+        const outBody = document.getElementById("out-body");
+        const actionsContainer = document.getElementById("gen-actions");
+        // Toast helper
+        function showToast(msg, timeout = 3000) {
+          let t = document.getElementById("toast");
+          if (!t) {
+            t = document.createElement("div");
+            t.id = "toast";
+            t.className =
+              "fixed bottom-6 right-6 bg-slate-900 text-white px-4 py-2 rounded shadow-lg hidden";
+            document.body.appendChild(t);
+          }
+          t.textContent = msg;
+          t.classList.remove("hidden");
+          clearTimeout(t._hideTimeout);
+          t._hideTimeout = setTimeout(() => t.classList.add("hidden"), timeout);
+        }
+
+        genBtn.addEventListener("click", async () => {
+          status.textContent = "Generating... this may take a while";
+          out.classList.add("hidden");
+          const cfg = loadConfig();
+          const repo = cfg.repo_url || "";
+          const style = cfg.style || "Technical Blog";
+          const length = cfg.length || "Medium";
+          const model = cfg.model || "gemini-1.5-flash-latest";
+          const project_desc = cfg.project_desc || "";
+          const uploads = cfg.uploads || [];
+          try {
+            const payload = {
+              repo_url: repo,
+              style: style,
+              length: length,
+              model: model,
+              goal: document.getElementById("gen-goal").value,
+              project_desc: project_desc,
+              uploads,
+            };
+            const res = await fetch("/api/generate", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload),
+            });
+            if (!res.ok) throw new Error("Network error");
+            const j = await res.json();
+            outTitle.innerHTML = j.title || "No title";
+            outTags.innerHTML = j.tags || "";
+            outBody.innerText = j.body || "";
+            out.classList.remove("hidden");
+            status.textContent = "Generation complete.";
+            // Persist this generation to history (best-effort)
+            (async function () {
+              try {
+                const entry = {
+                  id: "g_" + Date.now(),
+                  title: j.title || "No title",
+                  tags: j.tags || "",
+                  body: j.body || "",
+                  repo: repo,
+                  timestamp: new Date().toISOString(),
+                };
+                await fetch("/api/history", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ entry }),
+                });
+              } catch (e) {
+                console.warn("Failed to save history", e);
+              }
+            })();
+
+            // Add Save button into actions container
+            (function attachSave() {
+              let btn = document.getElementById("save-gen-btn");
+              if (!btn) {
+                const container =
+                  actionsContainer || document.querySelector(".mt-6.flex");
+                btn = document.createElement("button");
+                btn.id = "save-gen-btn";
+                btn.className =
+                  "px-4 py-2 bg-emerald-600 rounded text-sm text-white";
+                btn.textContent = "Save Result";
+                container.appendChild(btn);
+                btn.addEventListener("click", async () => {
+                  btn.disabled = true;
+                  btn.textContent = "Saving...";
+                  try {
+                    const item = {
+                      id: "s_" + Date.now(),
+                      title: j.title || "No title",
+                      tags: j.tags || "",
+                      body: j.body || "",
+                      repo: repo,
+                      saved_at: new Date().toISOString(),
+                    };
+                    const r = await fetch("/api/saved", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ item }),
+                    });
+                    if (!r.ok) throw new Error("save failed");
+                    btn.textContent = "Saved";
+                    showToast("Saved to Saved Items");
+                  } catch (err) {
+                    btn.textContent = "Save Failed";
+                    showToast("Save failed");
+                    console.warn(err);
+                  }
+                });
+              }
+            })();
+          } catch (err) {
+            status.textContent = "Generation failed: " + (err.message || err);
+          }
+        });
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,1262 @@
+<!doctype html>
+
+<html class="dark" lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Publication Assistant for AI Projects</title>
+    <!-- Tailwind CSS v3 with plugins -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <!-- Google Fonts: Inter -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap"
+      rel="stylesheet"
+    />
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ["Inter", "sans-serif"],
+            },
+            colors: {
+              brand: {
+                navy: "#0f172a",
+                sidebar: "#0b1120",
+                card: "#1e293b",
+                accent: "#4f46e5",
+                purple: "#6366f1",
+                border: "#334155",
+              },
+            },
+          },
+        },
+      };
+    </script>
+    <style data-purpose="custom-layout">
+      body {
+        background-color: #0f172a;
+        color: #f1f5f9;
+      }
+      /* Custom Scrollbar for dark theme */
+      ::-webkit-scrollbar {
+        width: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #0f172a;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #334155;
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #475569;
+      }
+    </style>
+  </head>
+  <body class="font-sans antialiased h-screen flex overflow-hidden">
+    <!-- BEGIN: Sidebar Navigation -->
+    <aside
+      class="w-64 bg-brand-sidebar flex-shrink-0 flex flex-col border-r border-brand-border"
+      data-purpose="sidebar"
+    >
+      <div class="p-6">
+        <div class="flex items-center gap-3">
+          <div
+            class="p-2 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg"
+          >
+            <svg
+              class="h-6 w-6 text-white"
+              fill="none"
+              stroke="currentColor"
+              viewbox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+              ></path>
+            </svg>
+          </div>
+          <h1 class="text-sm font-bold leading-tight">
+            Publication Assistant for AI Projects
+          </h1>
+        </div>
+      </div>
+      <nav class="flex-1 px-4 space-y-1 overflow-y-auto">
+        <a
+          class="flex items-center gap-3 px-3 py-2 bg-indigo-900/40 text-indigo-400 rounded-md group"
+          href="#"
+        >
+          <svg
+            class="h-5 w-5"
+            fill="none"
+            stroke="currentColor"
+            viewbox="0 0 24 24"
+          >
+            <path
+              d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+            ></path>
+            <path
+              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+            ></path>
+          </svg>
+          <span class="text-sm font-medium">Configuration</span>
+        </a>
+        <a
+          class="flex items-center gap-3 px-3 py-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-md transition-colors"
+          href="generate.html"
+        >
+          <svg
+            class="h-5 w-5"
+            fill="none"
+            stroke="currentColor"
+            viewbox="0 0 24 24"
+          >
+            <path
+              d="M13 10V3L4 14h7v7l9-11h-7z"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+            ></path>
+          </svg>
+          <span class="text-sm font-medium">Generate Article</span>
+        </a>
+        <a
+          class="flex items-center gap-3 px-3 py-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-md transition-colors"
+          href="results.html"
+        >
+          <svg
+            class="h-5 w-5"
+            fill="none"
+            stroke="currentColor"
+            viewbox="0 0 24 24"
+          >
+            <path
+              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+            ></path>
+          </svg>
+          <span class="text-sm font-medium">Results</span>
+        </a>
+        <a
+          class="flex items-center gap-3 px-3 py-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-md transition-colors"
+          href="results.html"
+        >
+          <svg
+            class="h-5 w-5"
+            fill="none"
+            stroke="currentColor"
+            viewbox="0 0 24 24"
+          >
+            <path
+              d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2z"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+            ></path>
+          </svg>
+          <span class="text-sm font-medium">Projects</span>
+        </a>
+        <a
+          class="flex items-center gap-3 px-3 py-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-md transition-colors"
+          href="projects.html"
+        >
+          <svg
+            class="h-5 w-5"
+            fill="none"
+            stroke="currentColor"
+            viewbox="0 0 24 24"
+          >
+            <path
+              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+            ></path>
+          </svg>
+          <span class="text-sm font-medium">History</span>
+        </a>
+        <a
+          class="flex items-center gap-3 px-3 py-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-md transition-colors"
+          href="history.html"
+        >
+          <svg
+            class="h-5 w-5"
+            fill="none"
+            stroke="currentColor"
+            viewbox="0 0 24 24"
+          >
+            <path
+              d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+            ></path>
+          </svg>
+          <span class="text-sm font-medium">Saved</span>
+        </a>
+        <a
+          class="flex items-center gap-3 px-3 py-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-md transition-colors"
+          href="saved.html"
+        >
+          <svg
+            class="h-5 w-5"
+            fill="none"
+            stroke="currentColor"
+            viewbox="0 0 24 24"
+          >
+            <path
+              d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+            ></path>
+          </svg>
+          <span class="text-sm font-medium">Analytics</span>
+        </a>
+        <div class="pt-4 border-t border-slate-800 mt-4">
+          <a
+            class="flex items-center gap-3 px-3 py-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-md transition-colors"
+            href="analytics.html"
+          >
+            <svg
+              class="h-5 w-5"
+              fill="none"
+              stroke="currentColor"
+              viewbox="0 0 24 24"
+            >
+              <path
+                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+              ></path>
+            </svg>
+            <span class="text-sm font-medium">Settings</span>
+          </a>
+          <a
+            class="flex items-center gap-3 px-3 py-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-md transition-colors"
+            href="help.html"
+          >
+            <svg
+              class="h-5 w-5"
+              fill="none"
+              stroke="currentColor"
+              viewbox="0 0 24 24"
+            >
+              <path
+                d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+              ></path>
+            </svg>
+            <span class="text-sm font-medium">Help &amp; Docs</span>
+          </a>
+        </div>
+      </nav>
+      <!-- Sidebar Footer -->
+      <div class="p-4 space-y-4">
+        <div
+          class="bg-brand-card/50 p-4 rounded-xl border border-brand-border"
+          data-purpose="ai-agents-status"
+        >
+          <div class="flex justify-between items-center mb-3">
+            <span
+              class="text-xs font-semibold text-slate-400 uppercase tracking-wider"
+              >AI Agents</span
+            >
+            <span
+              class="px-2 py-0.5 bg-indigo-500/20 text-indigo-400 text-[10px] font-bold rounded"
+              >5 ACTIVE</span
+            >
+          </div>
+          <ul class="space-y-2 text-xs">
+            <li class="flex items-center gap-2">
+              <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span> Repo
+              Analyzer
+            </li>
+            <li class="flex items-center gap-2">
+              <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+              Metadata Recommender
+            </li>
+            <li class="flex items-center gap-2">
+              <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+              Content Improver
+            </li>
+            <li class="flex items-center gap-2">
+              <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+              Reviewer / Critic
+            </li>
+            <li class="flex items-center gap-2">
+              <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+              Fact-Checker
+            </li>
+          </ul>
+          <button
+            class="w-full mt-4 py-2 border border-brand-border rounded-lg text-xs font-medium hover:bg-slate-800 transition-all"
+          >
+            View Agent Details
+          </button>
+        </div>
+        <div
+          class="bg-brand-card/50 p-4 rounded-xl border border-brand-border"
+          data-purpose="system-status"
+        >
+          <h4
+            class="text-xs font-semibold text-slate-400 mb-3 uppercase tracking-wider"
+          >
+            System Status
+          </h4>
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="flex items-center gap-2 text-xs text-slate-300">
+                <svg
+                  class="h-4 w-4 text-green-500"
+                  fill="currentColor"
+                  viewbox="0 0 20 20"
+                >
+                  <path
+                    clip-rule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                    fill-rule="evenodd"
+                  ></path>
+                </svg>
+                All systems operational
+              </span>
+            </div>
+            <div
+              class="flex items-center justify-between border-t border-brand-border pt-3"
+            >
+              <span class="text-xs text-slate-400">API &amp; Services</span>
+              <span
+                class="px-1.5 py-0.5 bg-green-900/40 text-green-400 text-[10px] font-bold rounded"
+                >ONLINE</span
+              >
+            </div>
+          </div>
+        </div>
+      </div>
+    </aside>
+    <!-- END: Sidebar Navigation -->
+    <!-- BEGIN: Main Dashboard Content -->
+    <main class="flex-1 overflow-y-auto p-8">
+      <!-- BEGIN: Top Header -->
+      <header
+        class="flex items-center justify-between mb-8"
+        data-purpose="header"
+      >
+        <div class="flex items-center gap-4">
+          <div
+            class="w-10 h-10 flex items-center justify-center text-indigo-400"
+          >
+            <svg
+              class="h-8 w-8"
+              fill="currentColor"
+              viewbox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M12 2L14.4 7.2L20 8L16 12L16.8 17.6L12 15.2L7.2 17.6L8 12L4 8L9.6 7.2L12 2Z"
+              ></path>
+            </svg>
+          </div>
+          <div>
+            <h2 class="text-2xl font-bold">
+              Publication Assistant for AI Projects
+            </h2>
+            <p class="text-slate-400 text-sm">
+              Transform your GitHub repository into a polished article or
+              README.
+            </p>
+          </div>
+        </div>
+        <div class="flex items-center gap-4">
+          <button
+            id="theme-toggle"
+            class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-brand-card border border-brand-border text-sm hover:bg-slate-800 transition-colors"
+          >
+            <svg
+              class="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              viewbox="0 0 24 24"
+            >
+              <path
+                d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+              ></path>
+            </svg>
+            <span id="theme-toggle-label">Dark</span>
+          </button>
+          <button
+            id="ui-toggle"
+            class="ml-2 flex items-center gap-2 px-3 py-1.5 rounded-full border border-brand-border hover:bg-slate-800 text-sm"
+          >
+            <span id="ui-toggle-label">Gradio</span>
+          </button>
+          <button
+            class="p-2 rounded-full border border-brand-border hover:bg-slate-800"
+          >
+            <svg
+              class="h-5 w-5 text-slate-400"
+              fill="none"
+              stroke="currentColor"
+              viewbox="0 0 24 24"
+            >
+              <path
+                d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+              ></path>
+            </svg>
+          </button>
+        </div>
+      </header>
+      <!-- END: Top Header -->
+      <!-- BEGIN: Project Setup Section -->
+      <section class="mb-8" data-purpose="project-setup">
+        <div class="bg-brand-card/40 border border-brand-border rounded-xl p-6">
+          <div class="flex items-center gap-3 mb-6">
+            <div class="p-2 bg-indigo-500/20 text-indigo-400 rounded">
+              <svg
+                class="h-5 w-5"
+                fill="none"
+                stroke="currentColor"
+                viewbox="0 0 24 24"
+              >
+                <path
+                  d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2z"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                ></path>
+              </svg>
+            </div>
+            <div>
+              <h3 class="font-bold">Project Setup</h3>
+              <p class="text-xs text-slate-400">
+                Provide your repository details and preferences
+              </p>
+            </div>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- Row 1 -->
+            <div class="md:col-span-1">
+              <label
+                class="flex items-center gap-2 text-xs font-semibold text-slate-300 mb-2"
+              >
+                <svg
+                  class="h-3.5 w-3.5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewbox="0 0 24 24"
+                >
+                  <path
+                    d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                  ></path>
+                </svg>
+                Repository URL
+              </label>
+              <input
+                id="repo-url"
+                class="w-full bg-slate-900 border-brand-border rounded-lg text-sm p-3 focus:ring-indigo-500 focus:border-indigo-500"
+                placeholder="https://github.com/username/repo"
+                type="text"
+              />
+              <p class="mt-1.5 text-[10px] text-slate-500 italic">
+                Enter GitHub repository URL
+              </p>
+            </div>
+            <div class="md:col-span-1">
+              <label
+                class="flex items-center gap-2 text-xs font-semibold text-slate-300 mb-2"
+              >
+                <svg
+                  class="h-3.5 w-3.5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewbox="0 0 24 24"
+                >
+                  <path
+                    d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2z"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                  ></path>
+                </svg>
+                Project Mode
+              </label>
+              <select
+                class="w-full bg-slate-900 border-brand-border rounded-lg text-sm p-3 focus:ring-indigo-500 focus:border-indigo-500 appearance-none"
+              >
+                <option>Create New Project</option>
+                <option>Update Existing</option>
+              </select>
+              <p class="mt-1.5 text-[10px] text-slate-500 italic">
+                Choose to create a new project or select existing
+              </p>
+            </div>
+            <div class="md:col-span-1">
+              <label
+                class="flex items-center gap-2 text-xs font-semibold text-slate-300 mb-2"
+                >Project Description (optional)</label
+              >
+              <input
+                id="cfg-project-desc"
+                class="w-full bg-slate-900 border-brand-border rounded-lg text-sm p-3 focus:ring-indigo-500 focus:border-indigo-500"
+                placeholder="Short project description"
+                type="text"
+              />
+              <p class="mt-1.5 text-[10px] text-slate-500 italic">
+                Saved to configuration
+              </p>
+            </div>
+            <!-- Row 2 -->
+            <div class="md:col-span-1">
+              <label
+                class="flex items-center gap-2 text-xs font-semibold text-slate-300 mb-2"
+              >
+                <svg
+                  class="h-3.5 w-3.5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewbox="0 0 24 24"
+                >
+                  <path
+                    d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2z"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                  ></path>
+                </svg>
+                Select Existing Project (optional)
+              </label>
+              <select
+                class="w-full bg-slate-900 border-brand-border rounded-lg text-sm p-3 focus:ring-indigo-500 focus:border-indigo-500 appearance-none"
+              >
+                <option>Select a project...</option>
+              </select>
+              <p class="mt-1.5 text-[10px] text-slate-500 italic">
+                Choose from your existing projects
+              </p>
+            </div>
+            <!-- Project Description removed -->
+          </div>
+        </div>
+      </section>
+      <!-- END: Project Setup Section -->
+      <!-- BEGIN: Grid Layout for Config & Preview -->
+      <div
+        class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8"
+        data-purpose="config-row"
+      >
+        <!-- BEGIN: Configuration Card -->
+        <div
+          class="bg-brand-card/40 border border-brand-border rounded-xl p-6"
+          data-purpose="configuration-card"
+        >
+          <div class="flex items-center gap-3 mb-6">
+            <div class="p-2 bg-indigo-500/20 text-indigo-400 rounded">
+              <svg
+                class="h-5 w-5"
+                fill="none"
+                stroke="currentColor"
+                viewbox="0 0 24 24"
+              >
+                <path
+                  d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                ></path>
+              </svg>
+            </div>
+            <h3 class="font-bold">Configuration</h3>
+          </div>
+          <div class="space-y-6">
+            <div>
+              <label
+                class="flex items-center gap-2 text-xs font-semibold text-slate-300 mb-2"
+              >
+                <svg
+                  class="h-3.5 w-3.5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewbox="0 0 24 24"
+                >
+                  <path
+                    d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                  ></path>
+                </svg>
+                Writing Style
+              </label>
+              <select
+                id="cfg-style"
+                class="w-full bg-slate-900 border-brand-border rounded-lg text-sm p-3 focus:ring-indigo-500 focus:border-indigo-500"
+              >
+                <option>Technical Blog</option>
+                <option>Research Paper</option>
+                <option>User Documentation</option>
+              </select>
+              <p class="mt-1.5 text-[10px] text-slate-500">
+                Choose the preferred writing style
+              </p>
+            </div>
+            <div>
+              <label
+                class="flex items-center gap-2 text-xs font-semibold text-slate-300 mb-2"
+              >
+                <svg
+                  class="h-3.5 w-3.5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewbox="0 0 24 24"
+                >
+                  <path
+                    d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                  ></path>
+                </svg>
+                Target Length
+              </label>
+              <select
+                id="cfg-length"
+                class="w-full bg-slate-900 border-brand-border rounded-lg text-sm p-3 focus:ring-indigo-500 focus:border-indigo-500"
+              >
+                <option>Short</option>
+                <option selected>Medium</option>
+                <option>Long</option>
+              </select>
+              <p class="mt-1.5 text-[10px] text-slate-500">
+                Select the desired article length
+              </p>
+            </div>
+            <div>
+              <label
+                class="flex items-center gap-2 text-xs font-semibold text-slate-300 mb-2"
+              >
+                <svg
+                  class="h-3.5 w-3.5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewbox="0 0 24 24"
+                >
+                  <path
+                    d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                  ></path>
+                </svg>
+                AI Model
+              </label>
+              <select
+                id="cfg-model"
+                class="w-full bg-slate-900 border-brand-border rounded-lg text-sm p-3 focus:ring-indigo-500 focus:border-indigo-500"
+              >
+                <option>Gemini 1.5 Flash Latest (Google)</option>
+                <option>Gemini 1.0 Pro (Google)</option>
+                <option>Groq Llama-3.1-8B-Instant (Groq)</option>
+                <option>Groq Mixtral-8x7B-32768 (Groq)</option>
+                <option>Heuristic Fallback (No LLM)</option>
+              </select>
+              <p class="mt-1.5 text-[10px] text-slate-500">
+                Choose the AI model for generation
+              </p>
+            </div>
+          </div>
+        </div>
+        <!-- END: Configuration Card -->
+        <!-- BEGIN: Supplemental Documents Card -->
+        <div
+          class="bg-brand-card/40 border border-brand-border rounded-xl p-6"
+          data-purpose="docs-card"
+        >
+          <div class="flex items-center gap-3 mb-6">
+            <div class="p-2 bg-indigo-500/20 text-indigo-400 rounded">
+              <svg
+                class="h-5 w-5"
+                fill="none"
+                stroke="currentColor"
+                viewbox="0 0 24 24"
+              >
+                <path
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                ></path>
+              </svg>
+            </div>
+            <h3 class="font-bold">
+              Supplemental Documents
+              <span class="text-xs font-normal text-slate-400">(optional)</span>
+            </h3>
+          </div>
+          <p class="text-xs text-slate-400 mb-6">
+            Upload PDFs or docs to provide additional context for better
+            results.
+          </p>
+          <div
+            class="h-64 border-2 border-dashed border-indigo-500/30 rounded-xl flex flex-col items-center justify-center p-6 bg-indigo-500/5 group hover:border-indigo-500/60 transition-all"
+          >
+            <div
+              class="w-16 h-16 bg-indigo-500/10 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform"
+            >
+              <svg
+                class="h-8 w-8 text-indigo-400"
+                fill="none"
+                stroke="currentColor"
+                viewbox="0 0 24 24"
+              >
+                <path
+                  d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                ></path>
+              </svg>
+            </div>
+            <p class="text-sm font-medium">Drag &amp; drop files here</p>
+            <p class="text-xs text-indigo-400 font-semibold mt-1">
+              or click to browse
+            </p>
+            <p class="text-[10px] text-slate-500 mt-4">
+              Supports PDF, DOCX, TXT (Max 20MB each)
+            </p>
+            <button
+              class="mt-6 px-6 py-2 bg-brand-navy border border-brand-border rounded-lg text-sm font-medium hover:bg-slate-800"
+            >
+              Browse Files
+            </button>
+          </div>
+          <div class="mt-6">
+            <input id="cfg-files" type="file" multiple class="text-sm" />
+            <button
+              id="cfg-upload-btn"
+              class="ml-3 px-4 py-2 bg-indigo-600 rounded text-sm"
+            >
+              Upload
+            </button>
+          </div>
+          <div class="mt-6 flex items-center gap-2 text-slate-500 text-xs">
+            <svg
+              class="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              viewbox="0 0 24 24"
+            >
+              <path
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+              ></path>
+            </svg>
+            No files uploaded
+          </div>
+        </div>
+        <!-- END: Supplemental Documents Card -->
+        <!-- BEGIN: Repository Preview Card -->
+        <div
+          class="bg-brand-card/40 border border-brand-border rounded-xl p-6"
+          data-purpose="preview-card"
+        >
+          <div class="flex items-center gap-3 mb-6">
+            <div class="p-2 bg-indigo-500/20 text-indigo-400 rounded">
+              <svg
+                class="h-5 w-5"
+                fill="none"
+                stroke="currentColor"
+                viewbox="0 0 24 24"
+              >
+                <path
+                  d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                ></path>
+              </svg>
+            </div>
+            <h3 class="font-bold">Repository Preview</h3>
+          </div>
+          <div
+            class="bg-slate-900/50 border border-brand-border rounded-xl p-8 flex flex-col items-center justify-center text-center"
+          >
+            <div class="mb-4 text-slate-500">
+              <svg class="h-10 w-10" fill="currentColor" viewbox="0 0 24 24">
+                <path
+                  d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.041-1.416-4.041-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"
+                ></path>
+              </svg>
+            </div>
+            <p class="text-xs text-slate-300 font-medium mb-1">
+              Enter a valid GitHub repository
+            </p>
+            <p class="text-[10px] text-slate-500 mb-6">
+              URL and click <span class="font-bold">Validate</span>
+            </p>
+            <div class="w-full space-y-2 text-left mb-8">
+              <div class="flex items-center gap-3 text-[11px] text-slate-400">
+                <svg
+                  class="h-3.5 w-3.5 text-green-500"
+                  fill="currentColor"
+                  viewbox="0 0 20 20"
+                >
+                  <path
+                    clip-rule="evenodd"
+                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                    fill-rule="evenodd"
+                  ></path>
+                </svg>
+                Repository structure
+              </div>
+              <div class="flex items-center gap-3 text-[11px] text-slate-400">
+                <svg
+                  class="h-3.5 w-3.5 text-green-500"
+                  fill="currentColor"
+                  viewbox="0 0 20 20"
+                >
+                  <path
+                    clip-rule="evenodd"
+                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                    fill-rule="evenodd"
+                  ></path>
+                </svg>
+                README content
+              </div>
+              <div class="flex items-center gap-3 text-[11px] text-slate-400">
+                <svg
+                  class="h-3.5 w-3.5 text-green-500"
+                  fill="currentColor"
+                  viewbox="0 0 20 20"
+                >
+                  <path
+                    clip-rule="evenodd"
+                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                    fill-rule="evenodd"
+                  ></path>
+                </svg>
+                Key files &amp; metadata
+              </div>
+              <div class="flex items-center gap-3 text-[11px] text-slate-400">
+                <svg
+                  class="h-3.5 w-3.5 text-green-500"
+                  fill="currentColor"
+                  viewbox="0 0 20 20"
+                >
+                  <path
+                    clip-rule="evenodd"
+                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                    fill-rule="evenodd"
+                  ></path>
+                </svg>
+                Project insights
+              </div>
+            </div>
+            <button
+              id="validate-btn"
+              class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg flex items-center justify-center gap-2 transition-all shadow-lg shadow-indigo-500/20"
+            >
+              <svg
+                class="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                viewbox="0 0 24 24"
+              >
+                <path
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                ></path>
+              </svg>
+              Validate Repository
+            </button>
+            <div
+              id="validate-result"
+              class="w-full mt-4 text-sm text-slate-300 hidden"
+            >
+              <div id="validate-msg" class="font-medium mb-2"></div>
+              <pre
+                id="repo-tree"
+                class="whitespace-pre-wrap text-xs text-slate-400 bg-slate-900 p-3 rounded-md"
+              ></pre>
+            </div>
+          </div>
+        </div>
+        <!-- END: Repository Preview Card -->
+      </div>
+      <!-- END: Grid Layout -->
+      <!-- BEGIN: Workflow Stepper -->
+      <div
+        class="bg-brand-card/40 border border-brand-border rounded-xl p-6 mb-8"
+        data-purpose="how-it-works"
+      >
+        <h3 class="font-bold mb-8">How It Works</h3>
+        <div class="flex items-start justify-between">
+          <!-- Step 1 -->
+          <div class="flex-1 flex gap-4">
+            <div
+              class="w-10 h-10 shrink-0 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold"
+            >
+              1
+            </div>
+            <div>
+              <h4 class="text-sm font-bold">Analyze</h4>
+              <p class="text-[11px] text-slate-400 mt-1 max-w-[140px]">
+                Our agents analyze your repository and content
+              </p>
+            </div>
+          </div>
+          <div class="pt-5 px-4">
+            <svg
+              class="h-4 w-4 text-slate-700"
+              fill="none"
+              stroke="currentColor"
+              viewbox="0 0 24 24"
+            >
+              <path
+                d="M9 5l7 7-7 7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+              ></path>
+            </svg>
+          </div>
+          <!-- Step 2 -->
+          <div class="flex-1 flex gap-4">
+            <div
+              class="w-10 h-10 shrink-0 bg-sky-600 text-white rounded-full flex items-center justify-center font-bold"
+            >
+              2
+            </div>
+            <div>
+              <h4 class="text-sm font-bold">Generate</h4>
+              <p class="text-[11px] text-slate-400 mt-1 max-w-[140px]">
+                AI generates improvements and suggestions
+              </p>
+            </div>
+          </div>
+          <div class="pt-5 px-4">
+            <svg
+              class="h-4 w-4 text-slate-700"
+              fill="none"
+              stroke="currentColor"
+              viewbox="0 0 24 24"
+            >
+              <path
+                d="M9 5l7 7-7 7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+              ></path>
+            </svg>
+          </div>
+          <!-- Step 3 -->
+          <div class="flex-1 flex gap-4">
+            <div
+              class="w-10 h-10 shrink-0 bg-emerald-600 text-white rounded-full flex items-center justify-center font-bold"
+            >
+              3
+            </div>
+            <div>
+              <h4 class="text-sm font-bold">Review</h4>
+              <p class="text-[11px] text-slate-400 mt-1 max-w-[140px]">
+                Review results and make refinements
+              </p>
+            </div>
+          </div>
+          <div class="pt-5 px-4">
+            <svg
+              class="h-4 w-4 text-slate-700"
+              fill="none"
+              stroke="currentColor"
+              viewbox="0 0 24 24"
+            >
+              <path
+                d="M9 5l7 7-7 7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+              ></path>
+            </svg>
+          </div>
+          <!-- Step 4 -->
+          <div class="flex-1 flex gap-4">
+            <div
+              class="w-10 h-10 shrink-0 bg-orange-600 text-white rounded-full flex items-center justify-center font-bold"
+            >
+              4
+            </div>
+            <div>
+              <h4 class="text-sm font-bold">Export</h4>
+              <p class="text-[11px] text-slate-400 mt-1 max-w-[140px]">
+                Export your polished article or README
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- END: Workflow Stepper -->
+      <!-- BEGIN: Footer Actions -->
+      <div
+        class="flex flex-col md:flex-row items-center justify-between gap-6"
+        data-purpose="footer-actions"
+      >
+        <div class="flex items-center gap-2 text-xs text-slate-500">
+          <svg
+            class="h-4 w-4"
+            fill="none"
+            stroke="currentColor"
+            viewbox="0 0 24 24"
+          >
+            <path
+              d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+            ></path>
+          </svg>
+          <span
+            >Your data is secure and private. We never share your repositories
+            or content.</span
+          >
+        </div>
+        <div class="flex flex-col items-center gap-2">
+          <button
+            id="goto-generate-btn"
+            class="px-12 py-4 bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-800 text-white font-bold rounded-xl flex items-center gap-3 shadow-xl hover:scale-105 transition-all"
+          >
+            <span class="text-xl">🚀</span>
+            <div class="text-left leading-tight">
+              <span class="block">Generate Article</span>
+              <span class="text-[10px] font-normal opacity-80"
+                >Start AI-powered generation</span
+              >
+            </div>
+          </button>
+          <span class="text-[10px] text-slate-400"
+            >Ready to transform your project?</span
+          >
+        </div>
+      </div>
+      <!-- END: Footer Actions -->
+    </main>
+    <!-- END: Main Dashboard Content -->
+
+    <script>
+      // Basic client-side wiring for Validate and Generate navigation
+      document.addEventListener("DOMContentLoaded", function () {
+        // Theme handling
+        const themeToggle = document.getElementById("theme-toggle");
+        const themeLabel = document.getElementById("theme-toggle-label");
+        const docEl = document.documentElement;
+        const storedTheme = localStorage.getItem("theme");
+        if (storedTheme === "light") {
+          docEl.classList.remove("dark");
+          if (themeLabel) themeLabel.textContent = "Light";
+        } else {
+          docEl.classList.add("dark");
+          if (themeLabel) themeLabel.textContent = "Dark";
+        }
+        if (themeToggle) {
+          const themeLabel = document.getElementById("theme-toggle-label");
+          themeToggle.addEventListener("click", () => {
+            if (docEl.classList.contains("dark")) {
+              docEl.classList.remove("dark");
+              localStorage.setItem("theme", "light");
+              if (themeLabel) themeLabel.textContent = "Light";
+            } else {
+              docEl.classList.add("dark");
+              localStorage.setItem("theme", "dark");
+              if (themeLabel) themeLabel.textContent = "Dark";
+            }
+          });
+        }
+        // UI toggle (open Gradio in new tab or return to web UI)
+        const uiToggle = document.getElementById("ui-toggle");
+        const uiPref = localStorage.getItem("ui_pref") || "web";
+        if (uiToggle) {
+          const uiLabel = document.getElementById("ui-toggle-label");
+          if (uiLabel)
+            uiLabel.textContent = uiPref === "gradio" ? "Web" : "Gradio";
+          uiToggle.addEventListener("click", async () => {
+            const cur = localStorage.getItem("ui_pref") || "web";
+            if (cur === "web") {
+              // Attempt to open Gradio on default port in a new tab
+              try {
+                window.open("http://localhost:7860", "_blank");
+                localStorage.setItem("ui_pref", "gradio");
+                if (uiLabel) uiLabel.textContent = "Web";
+              } catch (e) {
+                alert(
+                  "Failed to open Gradio. Is it running on http://localhost:7860 ?",
+                );
+              }
+            } else {
+              // Switch back to web UI
+              localStorage.setItem("ui_pref", "web");
+              if (uiLabel) uiLabel.textContent = "Gradio";
+              window.location.href = "index.html";
+            }
+          });
+        }
+        const validateBtn = document.getElementById("validate-btn");
+        const repoInput = document.getElementById("repo-url");
+        const resultBox = document.getElementById("validate-result");
+        const msgEl = document.getElementById("validate-msg");
+        const treeEl = document.getElementById("repo-tree");
+        const gotoGen = document.getElementById("goto-generate-btn");
+
+        // Configuration persistence
+        const CFG_KEY = "pa_config";
+        function loadConfig() {
+          try {
+            return JSON.parse(localStorage.getItem(CFG_KEY) || "{}");
+          } catch (e) {
+            return {};
+          }
+        }
+        function saveConfig(c) {
+          localStorage.setItem(CFG_KEY, JSON.stringify(c));
+        }
+
+        // populate config inputs
+        (function () {
+          const cfg = loadConfig();
+          if (cfg.repo_url)
+            document.getElementById("repo-url").value = cfg.repo_url;
+          if (cfg.style) {
+            const s = document.getElementById("cfg-style");
+            if (s) s.value = cfg.style;
+          }
+          if (cfg.length) {
+            const l = document.getElementById("cfg-length");
+            if (l) l.value = cfg.length;
+          }
+          if (cfg.model) {
+            const m = document.getElementById("cfg-model");
+            if (m) m.value = cfg.model;
+          }
+          if (cfg.project_desc) {
+            const p = document.getElementById("cfg-project-desc");
+            if (p) p.value = cfg.project_desc;
+          }
+        })();
+
+        // save on change
+        [
+          "repo-url",
+          "cfg-style",
+          "cfg-length",
+          "cfg-model",
+          "cfg-project-desc",
+        ].forEach((id) => {
+          const el = document.getElementById(id);
+          if (!el) return;
+          el.addEventListener("change", () => {
+            const cfg = loadConfig();
+            cfg.repo_url = (
+              document.getElementById("repo-url") || { value: "" }
+            ).value;
+            cfg.style = (
+              document.getElementById("cfg-style") || { value: "" }
+            ).value;
+            cfg.length = (
+              document.getElementById("cfg-length") || { value: "" }
+            ).value;
+            cfg.model = (
+              document.getElementById("cfg-model") || { value: "" }
+            ).value;
+            cfg.project_desc = (
+              document.getElementById("cfg-project-desc") || { value: "" }
+            ).value;
+            saveConfig(cfg);
+          });
+        });
+
+        // upload handler
+        const uploadBtn = document.getElementById("cfg-upload-btn");
+        if (uploadBtn) {
+          uploadBtn.addEventListener("click", async () => {
+            const filesEl = document.getElementById("cfg-files");
+            if (!filesEl || !filesEl.files.length)
+              return alert("Select files first");
+            const fd = new FormData();
+            for (const f of filesEl.files) fd.append("files", f);
+            try {
+              const res = await fetch("/api/upload", {
+                method: "POST",
+                body: fd,
+              });
+              if (!res.ok) throw new Error("upload failed");
+              const j = await res.json();
+              const cfg = loadConfig();
+              cfg.uploads = (cfg.uploads || []).concat(j.saved || []);
+              saveConfig(cfg);
+              alert("Uploaded " + (j.saved || []).length + " files");
+            } catch (e) {
+              alert("Upload failed: " + e);
+            }
+          });
+        }
+
+        if (validateBtn) {
+          validateBtn.addEventListener("click", async () => {
+            const url = repoInput ? repoInput.value.trim() : "";
+            msgEl.textContent = "Validating...";
+            treeEl.textContent = "";
+            resultBox.classList.remove("hidden");
+            try {
+              const res = await fetch("/api/validate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ repo_url: url }),
+              });
+              if (!res.ok) throw new Error("Network error");
+              const j = await res.json();
+              msgEl.textContent = j.message || "No message";
+              treeEl.textContent = j.tree || "";
+            } catch (err) {
+              msgEl.textContent = "Validation failed: " + (err.message || err);
+              treeEl.textContent = "";
+            }
+          });
+        }
+
+        if (gotoGen) {
+          gotoGen.addEventListener("click", () => {
+            const repo = repoInput ? repoInput.value.trim() : "";
+            const q = repo ? `?repo=${encodeURIComponent(repo)}` : "";
+            window.location.href = `generate.html${q}`;
+          });
+        }
+      });
+    </script>
+  </body>
+</html>

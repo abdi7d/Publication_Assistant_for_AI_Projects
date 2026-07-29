@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Results - Publication Assistant</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  </head>
+  <body class="min-h-screen p-8 font-sans">
+    <div class="max-w-4xl mx-auto">
+      <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-bold">Results</h1>
+        <a href="index.html" class="px-3 py-2 bg-slate-800 rounded text-sm"
+          >Back</a
+        >
+      </div>
+      <div
+        id="results-list"
+        class="bg-slate-900 p-6 rounded text-sm text-slate-200"
+      >
+        Loading results...
+      </div>
+    </div>
+    <script>
+      const storedTheme = localStorage.getItem("theme");
+      if (storedTheme === "light")
+        document.documentElement.classList.remove("dark");
+      else document.documentElement.classList.add("dark");
+
+      async function loadResults() {
+        try {
+          const res = await fetch("/api/history");
+          if (!res.ok) throw new Error("fetch failed");
+          const data = await res.json();
+          const entries = data.entries || [];
+          const container = document.getElementById("results-list");
+          if (entries.length === 0) {
+            container.innerText = "No recent results.";
+            return;
+          }
+          container.innerHTML = "";
+          for (const e of entries) {
+            const el = document.createElement("div");
+            el.className = "mb-4 p-3 bg-slate-800 rounded";
+            const t = document.createElement("div");
+            t.className = "font-semibold";
+            t.innerText = e.title || "Untitled";
+            el.appendChild(t);
+            const meta = document.createElement("div");
+            meta.className = "text-xs text-slate-400";
+            meta.innerText = `${e.repo || ""} • ${new Date(e.timestamp).toLocaleString()}`;
+            el.appendChild(meta);
+            const body = document.createElement("div");
+            body.className = "mt-2 text-sm text-slate-200 whitespace-pre-wrap";
+            body.innerText = (e.body || "").substring(0, 1000);
+            el.appendChild(body);
+            const actions = document.createElement("div");
+            actions.className = "mt-2";
+            const saveBtn = document.createElement("button");
+            saveBtn.className = "px-3 py-1 bg-emerald-600 rounded text-sm";
+            saveBtn.innerText = "Save";
+            saveBtn.addEventListener("click", async () => {
+              saveBtn.disabled = true;
+              saveBtn.innerText = "Saving...";
+              try {
+                await fetch("/api/saved", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    item: {
+                      id: "s_" + Date.now(),
+                      title: e.title,
+                      body: e.body,
+                      repo: e.repo,
+                      saved_at: new Date().toISOString(),
+                    },
+                  }),
+                });
+                saveBtn.innerText = "Saved";
+              } catch (err) {
+                saveBtn.innerText = "Failed";
+              }
+            });
+            actions.appendChild(saveBtn);
+            el.appendChild(actions);
+            container.appendChild(el);
+          }
+        } catch (e) {
+          document.getElementById("results-list").innerText =
+            "Failed to load results.";
+        }
+      }
+      loadResults();
+    </script>
+  </body>
+</html>

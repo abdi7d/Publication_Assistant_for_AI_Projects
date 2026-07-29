@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Projects - Publication Assistant</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  </head>
+  <body class="min-h-screen p-8 font-sans">
+    <div class="max-w-4xl mx-auto">
+      <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-bold">Projects</h1>
+        <a href="index.html" class="px-3 py-2 bg-slate-800 rounded text-sm"
+          >Back</a
+        >
+      </div>
+      <div
+        id="projects-list"
+        class="bg-slate-900 p-6 rounded text-sm text-slate-200"
+      >
+        Loading projects...
+      </div>
+    </div>
+
+    <script>
+      // Apply stored theme
+      const storedTheme = localStorage.getItem("theme");
+      if (storedTheme === "light")
+        document.documentElement.classList.remove("dark");
+      else document.documentElement.classList.add("dark");
+
+      async function loadProjects() {
+        try {
+          const res = await fetch("/api/projects");
+          const j = await res.json();
+          const el = document.getElementById("projects-list");
+          if (!j || Object.keys(j).length === 0) {
+            el.innerHTML = '<div class="text-slate-400">No projects yet.</div>';
+            return;
+          }
+          let html = '<ul class="space-y-3">';
+          for (const k of Object.keys(j)) {
+            const p = j[k] || {};
+            html += `<li class="p-3 bg-slate-800 rounded flex justify-between items-center"><div><div class=\"font-semibold\">${k}</div><div class=\"text-xs text-slate-400\">${p.repo_url || ""}</div></div><div class=\"flex gap-2\"><button onclick=\"editProject(\'${k}\')\" class=\"px-3 py-1 bg-amber-600 rounded text-xs\">Edit</button><button onclick=\"deleteProject('${k}')\" class=\"px-3 py-1 bg-red-600 rounded text-xs\">Delete</button></div></li>`;
+          }
+          html += "</ul>";
+          el.innerHTML = html;
+        } catch (e) {
+          document.getElementById("projects-list").textContent =
+            "Failed to load projects";
+        }
+      }
+      async function deleteProject(id) {
+        if (!confirm("Delete project " + id + "?")) return;
+        await fetch("/api/projects", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ project_id: id }),
+        });
+        loadProjects();
+      }
+      loadProjects();
+    </script>
+  </body>
+  async function editProject(id){ try{ const res = await fetch('/api/projects');
+  const j = await res.json(); const p = j[id] || {}; const newRepo =
+  prompt('Edit repository URL for '+id, p.repo_url||''); if(newRepo===null)
+  return; // cancelled const title = prompt('Title/label (optional)',
+  (p.metadata && p.metadata.title) || ''); const metadata = {
+  ...(p.metadata||{}) }; if(title!==null) metadata.title = title; await
+  fetch('/api/projects', { method: 'POST', headers:
+  {'Content-Type':'application/json'}, body: JSON.stringify({ project_id: id,
+  repo_url: newRepo, metadata }) }); loadProjects(); }catch(e){ alert('Failed to
+  edit project: '+e); } }
+</html>

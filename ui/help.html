@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Help & Docs - Publication Assistant</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  </head>
+  <body class="min-h-screen p-8 font-sans">
+    <div class="max-w-4xl mx-auto">
+      <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-bold">Help & Docs</h1>
+        <a href="index.html" class="px-3 py-2 bg-slate-800 rounded text-sm"
+          >Back</a
+        >
+      </div>
+      <div id="help" class="bg-slate-900 p-6 rounded text-sm text-slate-200">
+        Loading help...
+      </div>
+    </div>
+    <script>
+      const storedTheme = localStorage.getItem("theme");
+      if (storedTheme === "light")
+        document.documentElement.classList.remove("dark");
+      else document.documentElement.classList.add("dark");
+      async function load() {
+        try {
+          const res = await fetch("/api/help");
+          const j = await res.json();
+          document.getElementById("help").innerHTML =
+            `<div class=\"text-sm\">Docs: <a class=\"text-indigo-400\" href=\"${j.docs_url}\">${j.docs_url}</a></div><div class=\"text-sm mt-2\">Contact: ${j.contact}</div>`;
+        } catch (e) {
+          document.getElementById("help").textContent = "Failed to load help";
+        }
+      }
+      load();
+    </script>
+  </body>
+</html>

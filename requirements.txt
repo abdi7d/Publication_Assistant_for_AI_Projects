@@ -1,0 +1,29 @@
+# Core
+python-dotenv
+requests
+gradio>=4.0
+
+# LLMs
+groq
+google-genai
+
+# Vector DB
+chromadb
+
+# LangChain / LangGraph
+langchain>=0.2
+langchain-community>=0.2
+langgraph>=0.1
+
+# Search & arXiv
+tavily-python
+arxiv
+
+# Optional (nice-to-have)
+tqdm
+pypdf
+
+# Web Framework (FastAPI + server)
+fastapi
+uvicorn[standard]
+python-multipart
