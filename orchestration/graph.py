@@ -11,6 +11,14 @@ class Orchestrator:
         logger.info("Initializing Orchestrator with LangGraph")
         self.bus = bus
 
+    def compile(self):
+        return self
+
+    def execute(self, repo_source: str, agents: Dict[str, Any] | None = None, style: str = "Technical Blog", goal: str = ""):
+        if agents is None:
+            return {}
+        return self.run_pipeline(agents, repo_source, style=style, goal=goal)
+
     def run_pipeline(self, agents: Dict[str, Any], repo_source: str, style: str = "Technical Blog", goal: str = ""):
         """Run pipeline using LangGraph."""
         logger.info(

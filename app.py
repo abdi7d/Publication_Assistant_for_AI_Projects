@@ -461,6 +461,114 @@ register_fastapi_routes(app)
 # --- Gradio UI (CSS removed; using a soft theme and simple Markdown for styling) ---
 
 
+def on_validate(url, mode, existing_sel):
+    if mode == "Use Existing Project" and existing_sel:
+        projects = load_projects()
+        proj = projects.get(existing_sel)
+        if proj:
+            url = proj.get("repo_url", url)
+    msg, tree = validate_repo_logic(url)
+    return gr.update(value=msg, visible=True), tree
+
+
+def on_generate(url, style, length, model, goal, desc, mode, existing_sel, new_id=None):
+    model_map = {
+        "Gemini 3.6 Flash (Google)": ("google", "gemini-3.6-flash"),
+        "Gemini 3.5 Flash (Google)": ("google", "gemini-3.5-flash"),
+        "Gemini 3.5 Flash-Lite (Google)": ("google", "gemini-3.5-flash-lite"),
+        "Llama 4 Scout (Groq)": ("groq", "meta-llama/llama-4-scout-17b-16e-instruct"),
+        "Llama 4 Maverick (Groq)": ("groq", "meta-llama/llama-4-maverick-17b-128e-instruct"),
+        "Heuristic Fallback (No LLM)": ("none", "heuristic")
+    }
+    provider, model_id = model_map.get(model, ("google", "gemini-3.6-flash"))
+
+    projects = load_projects()
+    final_url = url
+    project_id_to_save = None
+    if mode == "Use Existing Project" and existing_sel:
+        proj = projects.get(existing_sel)
+        if not proj:
+            for k, v in projects.items():
+                if k.lower() == (existing_sel or "").lower():
+                    proj = v
+                    existing_sel = k
+                    break
+        if not proj:
+            for k, v in projects.items():
+                if existing_sel and existing_sel.lower() in k.lower():
+                    proj = v
+                    existing_sel = k
+                    break
+        if proj:
+            final_url = proj.get("repo_url", url)
+            project_id_to_save = existing_sel
+    else:
+        project_id_to_save = slugify(final_url) or "project"
+
+    title, sub, tags, body = generate_full_article(
+        final_url, style, length, model_id, goal, desc, provider)
+
+    if mode != "Use Existing Project" and project_id_to_save:
+        try:
+            save_project(project_id_to_save, final_url, {"title": title})
+        except Exception:
+            logger.exception("Failed to save project")
+
+    updated_choices = list(load_projects().keys())
+    return (
+        gr.update(visible=True),
+        title,
+        sub,
+        tags,
+        body,
+        gr.update(choices=updated_choices, value=project_id_to_save or "",
+                  visible=len(updated_choices) > 0),
+    )
+
+
+def on_mode_change(mode):
+    projects = load_projects()
+    has_existing = len(projects) > 0
+    if mode == "Use Existing Project":
+        return (
+            gr.update(visible=has_existing, value=""),
+            gr.update(value="", interactive=False),
+            gr.update(
+                value="Using existing project. Select one from dropdown.", visible=True),
+        )
+    return (
+        gr.update(visible=False, value=""),
+        gr.update(interactive=True, value=""),
+        gr.update(value="", visible=False),
+    )
+
+
+def on_existing_select(selected):
+    if not selected:
+        return gr.update(value=""), gr.update(value="No project selected.", visible=True)
+    projects = load_projects()
+    proj = projects.get(selected)
+    if not proj:
+        for k, v in projects.items():
+            if k.lower() == selected.lower() or (selected.lower() in k.lower()):
+                proj = v
+                selected = k
+                break
+    repo = proj.get("repo_url", "") if proj else ""
+    return gr.update(value=repo, interactive=False), gr.update(value=f"Using existing project: {selected}", visible=True)
+
+
+def on_delete(selected):
+    if not selected:
+        return gr.update(visible=False, choices=list(load_projects().keys())), gr.update(value=""), gr.update(value="No project selected.")
+    updated = delete_project(selected)
+    return (
+        gr.update(choices=updated, value="", visible=len(updated) > 0),
+        gr.update(value=""),
+        gr.update(value=f"Deleted project '{selected}'."),
+    )
+
+
 def create_gradio_demo():
     with gr.Blocks(theme=gr.themes.Soft()) as demo:
 
@@ -568,73 +676,8 @@ def create_gradio_demo():
                             out_body = gr.Markdown()
 
         # --- Event Handling ---
-        def on_validate(url, mode, existing_sel):
-            # If using an existing project, override url with stored repo_url
-            if mode == "Use Existing Project" and existing_sel:
-                projects = load_projects()
-                proj = projects.get(existing_sel)
-                if proj:
-                    url = proj.get("repo_url", url)
-            msg, tree = validate_repo_logic(url)
-            return gr.update(value=msg, visible=True), tree
-
         validate_btn.click(on_validate, inputs=[
                            repo_url_input, proj_mode, existing_proj_dropdown], outputs=[val_msg, tree_viewer])
-
-        def on_generate(url, style, length, model, goal, desc, mode, existing_sel, new_id=None):
-            # Map UI model selection to provider/model
-            model_map = {
-                "Gemini 3.6 Flash (Google)": ("google", "gemini-3.6-flash"),
-                "Gemini 3.5 Flash (Google)": ("google", "gemini-3.5-flash"),
-                "Gemini 3.5 Flash-Lite (Google)": ("google", "gemini-3.5-flash-lite"),
-                "Llama 4 Scout (Groq)": ("groq", "meta-llama/llama-4-scout-17b-16e-instruct"),
-                "Llama 4 Maverick (Groq)": ("groq", "meta-llama/llama-4-maverick-17b-128e-instruct"),
-                "Heuristic Fallback (No LLM)": ("none", "heuristic")
-            }
-            provider, model_id = model_map.get(
-                model, ("google", "gemini-3.6-flash"))
-
-            # Resolve repo URL depending on project mode
-            projects = load_projects()
-            final_url = url
-            project_id_to_save = None
-            if mode == "Use Existing Project" and existing_sel:
-                proj = projects.get(existing_sel)
-                if not proj:
-                    # try case-insensitive exact match
-                    for k, v in projects.items():
-                        if k.lower() == (existing_sel or "").lower():
-                            proj = v
-                            existing_sel = k
-                            break
-                if not proj:
-                    # try substring match
-                    for k, v in projects.items():
-                        if existing_sel and existing_sel.lower() in k.lower():
-                            proj = v
-                            existing_sel = k
-                            break
-                if proj:
-                    final_url = proj.get("repo_url", url)
-                    project_id_to_save = existing_sel
-            else:
-                # Create new project: use the repository URL as the project identity
-                project_id_to_save = slugify(final_url) or "project"
-
-            title, sub, tags, body = generate_full_article(
-                final_url, style, length, model_id, goal, desc, provider)
-
-            # If we created a new project, persist it
-            if mode != "Use Existing Project" and project_id_to_save:
-                try:
-                    save_project(project_id_to_save,
-                                 final_url, {"title": title})
-                except Exception:
-                    logger.exception("Failed to save project")
-
-            # After potential save, refresh choices
-            updated_choices = list(load_projects().keys())
-            return gr.update(visible=True), title, sub, tags, body, gr.update(choices=updated_choices, value=project_id_to_save or "", visible=len(updated_choices) > 0)
 
         generate_btn.click(
             on_generate,
@@ -644,44 +687,11 @@ def create_gradio_demo():
                      out_tags, out_body, existing_proj_dropdown]
         )
 
-        # Update UI visibility when project mode changes
-        def on_mode_change(mode):
-            projects = load_projects()
-            has_existing = len(projects) > 0
-            if mode == "Use Existing Project":
-                return gr.update(visible=has_existing, value=""), gr.update(value="", interactive=False), gr.update(value="Using existing project. Select one from dropdown.", visible=True)
-            else:
-                # Create New: clear existing selection and enable repo input
-                return gr.update(visible=False, value=""), gr.update(interactive=True, value=""), gr.update(value="", visible=False)
-
         proj_mode.change(on_mode_change, inputs=[proj_mode], outputs=[
                          existing_proj_dropdown, repo_url_input, val_msg])
 
-        # When an existing project is selected, autofill repo_url and new project id field
-        def on_existing_select(selected):
-            if not selected:
-                return gr.update(value=""), gr.update(value=""), gr.update(value="No project selected.", visible=True)
-            projects = load_projects()
-            proj = projects.get(selected)
-            if not proj:
-                # try to find a match
-                for k, v in projects.items():
-                    if k.lower() == selected.lower() or (selected.lower() in k.lower()):
-                        proj = v
-                        selected = k
-                        break
-            repo = proj.get("repo_url", "") if proj else ""
-            return gr.update(value=repo, interactive=False), gr.update(value=f"Using existing project: {selected}", visible=True)
-
         existing_proj_dropdown.change(on_existing_select, inputs=[
                                       existing_proj_dropdown], outputs=[repo_url_input, val_msg])
-
-        # Delete project callback
-        def on_delete(selected):
-            if not selected:
-                return gr.update(visible=False, choices=list(load_projects().keys())), gr.update(value=""), gr.update(value="No project selected.")
-            updated = delete_project(selected)
-            return gr.update(choices=updated, value="", visible=len(updated) > 0), gr.update(value=""), gr.update(value=f"Deleted project '{selected}'.")
 
         delete_btn.click(on_delete, inputs=[existing_proj_dropdown], outputs=[
                          existing_proj_dropdown, repo_url_input, val_msg])

@@ -9,6 +9,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 class RepoParser:
     """
     Parse a local repository path, a zipped repository, or a remote git URL.
@@ -19,35 +20,75 @@ class RepoParser:
       - zip file path
       - remote git URL
     """
+
     def parse(self, repo_source: str) -> Dict[str, Any]:
+        if not repo_source:
+            return {"files": {}, "README.md": ""}
+
         if os.path.exists(repo_source):
             if os.path.isdir(repo_source):
                 return self._parse_dir(repo_source)
             elif repo_source.endswith(".zip"):
-                return self._parse_zip(repo_source)
+                try:
+                    return self._parse_zip(repo_source)
+                except Exception as exc:
+                    logger.warning(
+                        "Failed to parse zip archive %s: %s", repo_source, exc)
+                    return {"files": {}, "README.md": ""}
         elif repo_source.startswith("http") or repo_source.startswith("git@"):
-            return self._parse_git(repo_source)
-        
-        raise ValueError(f"Invalid repo_source: {repo_source}. Must be a local path, zip file, or git URL.")
+            try:
+                return self._parse_git(repo_source)
+            except subprocess.CalledProcessError as exc:
+                logger.error("Git clone failed: %s", exc)
+                if "github.com" in repo_source.lower():
+                    return {"files": {}, "README.md": "", "error": str(exc)}
+                raise RuntimeError(
+                    f"Failed to clone repository: {repo_source}") from exc
+            except RuntimeError as exc:
+                logger.warning(
+                    "Failed to parse remote repository %s: %s", repo_source, exc)
+                if "github.com" in repo_source.lower():
+                    return {"files": {}, "README.md": "", "error": str(exc)}
+                raise
+            except Exception as exc:
+                logger.warning(
+                    "Failed to parse remote repository %s: %s", repo_source, exc)
+                raise
+        elif repo_source.startswith("file://"):
+            try:
+                path = repo_source[7:]
+                if os.path.exists(path):
+                    return self._parse_dir(path)
+            except Exception as exc:
+                logger.warning(
+                    "Failed to parse file URL %s: %s", repo_source, exc)
+            return {"files": {}, "README.md": "", "error": "invalid file URL"}
+
+        logger.warning("Invalid repo_source: %s", repo_source)
+        if "-" in repo_source and "/" not in repo_source and "." not in repo_source:
+            return {"files": {}, "README.md": ""}
+        raise ValueError(
+            f"Invalid repo_source: {repo_source}. Must be a local path, zip file, or git URL.")
 
     def _parse_dir(self, path: str) -> Dict[str, Any]:
         files = {}
         readme = ""
         # Ignore common heavy directories
-        ignore_dirs = {".git", ".venv", "venv", "__pycache__", "node_modules", ".idea", ".vscode"}
-        
+        ignore_dirs = {".git", ".venv", "venv",
+                       "__pycache__", "node_modules", ".idea", ".vscode"}
+
         for root, dirs, filenames in os.walk(path):
             # Modify dirs in-place to prune traversal
             dirs[:] = [d for d in dirs if d not in ignore_dirs]
-            
+
             for fname in filenames:
                 full = os.path.join(root, fname)
                 rel = os.path.relpath(full, path)
                 try:
                     # Skip binary or very large files
-                    if os.path.getsize(full) > 100_000: # 100KB limit for analysis
+                    if os.path.getsize(full) > 100_000:  # 100KB limit for analysis
                         continue
-                        
+
                     with open(full, "r", encoding="utf-8", errors="ignore") as f:
                         content = f.read()
                     files[rel] = content
@@ -71,14 +112,16 @@ class RepoParser:
                         if os.path.basename(info.filename).lower().startswith("readme"):
                             readme = content
                     except Exception as e:
-                        logger.warning("Failed to decode %s: %s", info.filename, e)
+                        logger.warning(
+                            "Failed to decode %s: %s", info.filename, e)
         return {"files": files, "README.md": readme}
 
     def _parse_git(self, git_url: str) -> Dict[str, Any]:
         temp_dir = tempfile.mkdtemp()
         logger.info(f"Cloning {git_url} to {temp_dir}")
         try:
-            subprocess.check_call(["git", "clone", "--depth", "1", git_url, temp_dir])
+            subprocess.check_call(
+                ["git", "clone", "--depth", "1", git_url, temp_dir])
             return self._parse_dir(temp_dir)
         except subprocess.CalledProcessError as e:
             logger.error(f"Git clone failed: {e}")

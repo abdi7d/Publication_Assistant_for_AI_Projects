@@ -60,3 +60,7 @@ class ArxivScholarTool:
         except Exception as e:
             logger.exception("Arxiv query error: %s", e)
             return []
+
+    def search_arxiv(self, query: str, max_results: int = 3) -> List[Dict[str, Any]]:
+        """Backward-compatible alias used by tests and callers."""
+        return self.search(query, max_results=max_results)
