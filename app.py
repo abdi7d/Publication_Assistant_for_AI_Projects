@@ -340,10 +340,11 @@ def register_fastapi_routes(app: FastAPI):
     async def api_generate(request: GenerateRequest):
         final_url = request.repo_url
         model_map = {
-            "Gemini 1.5 Flash Latest (Google)": ("google", "gemini-1.5-flash-latest"),
-            "Gemini 1.0 Pro (Google)": ("google", "gemini-1.0-pro"),
-            "Groq Llama-3.1-8B-Instant (Groq)": ("groq", "llama-3.1-8b-instant"),
-            "Groq Mixtral-8x7B-32768 (Groq)": ("groq", "mixtral-8x7b-32768"),
+            "Gemini 3.6 Flash (Google)": ("google", "gemini-3.6-flash"),
+            "Gemini 3.5 Flash (Google)": ("google", "gemini-3.5-flash"),
+            "Gemini 3.5 Flash-Lite (Google)": ("google", "gemini-3.5-flash-lite"),
+            "Llama 4 Scout (Groq)": ("groq", "meta-llama/llama-4-scout-17b-16e-instruct"),
+            "Llama 4 Maverick (Groq)": ("groq", "meta-llama/llama-4-maverick-17b-128e-instruct"),
             "Heuristic Fallback (No LLM)": ("none", "heuristic")
         }
         provider, model_id = model_map.get(
@@ -482,13 +483,14 @@ def create_gradio_demo():
                 gr.Markdown("### 🤖 AI Model")
                 model_input = gr.Dropdown(
                     [
-                        "Gemini 1.5 Flash Latest (Google)",
-                        "Gemini 1.0 Pro (Google)",
-                        "Groq Llama-3.1-8B-Instant (Groq)",
-                        "Groq Mixtral-8x7B-32768 (Groq)",
+                        "Gemini 3.6 Flash (Google)",
+                        "Gemini 3.5 Flash (Google)",
+                        "Gemini 3.5 Flash-Lite (Google)",
+                        "Llama 4 Scout (Groq)",
+                        "Llama 4 Maverick (Groq)",
                         "Heuristic Fallback (No LLM)"
                     ],
-                    value="Gemini 1.5 Flash Latest (Google)", label="Choose LLM"
+                    value="Gemini 3.6 Flash (Google)", label="Choose LLM"
                 )
 
             # --- RIGHT MAIN PANEL ---
@@ -582,14 +584,15 @@ def create_gradio_demo():
         def on_generate(url, style, length, model, goal, desc, mode, existing_sel, new_id=None):
             # Map UI model selection to provider/model
             model_map = {
-                "Gemini 1.5 Flash Latest (Google)": ("google", "gemini-1.5-flash-latest"),
-                "Gemini 1.0 Pro (Google)": ("google", "gemini-1.0-pro"),
-                "Groq Llama-3.1-8B-Instant (Groq)": ("groq", "llama-3.1-8b-instant"),
-                "Groq Mixtral-8x7B-32768 (Groq)": ("groq", "mixtral-8x7b-32768"),
+                "Gemini 3.6 Flash (Google)": ("google", "gemini-3.6-flash"),
+                "Gemini 3.5 Flash (Google)": ("google", "gemini-3.5-flash"),
+                "Gemini 3.5 Flash-Lite (Google)": ("google", "gemini-3.5-flash-lite"),
+                "Llama 4 Scout (Groq)": ("groq", "meta-llama/llama-4-scout-17b-16e-instruct"),
+                "Llama 4 Maverick (Groq)": ("groq", "meta-llama/llama-4-maverick-17b-128e-instruct"),
                 "Heuristic Fallback (No LLM)": ("none", "heuristic")
             }
             provider, model_id = model_map.get(
-                model, ("google", "gemini-1.5-flash-latest"))
+                model, ("google", "gemini-3.6-flash"))
 
             # Resolve repo URL depending on project mode
             projects = load_projects()
