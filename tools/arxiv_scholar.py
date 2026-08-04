@@ -17,6 +17,7 @@ except Exception:
 class ArxivScholarTool:
     def __init__(self, rate_limit: float = 0.3):
         self.rate_limit = rate_limit
+        self.client = None
         if _HAS_ARXIV:
             try:
                 self.client = arxiv.Client()
@@ -24,43 +25,50 @@ class ArxivScholarTool:
                 self.client = None
                 logger.exception(
                     "Failed to initialize arxiv.Client; arXiv lookups disabled.")
-        else:
-            self.client = None
 
     def search(self, query: str, max_results: int = 3) -> List[Dict[str, Any]]:
-        """Search arXiv for papers related to the query.
+        """Search arXiv for papers related to the query."""
+        if not query or not _HAS_ARXIV or self.client is None:
+            return []
+        # Sanitize and shorten query to avoid sending large or markup-laden strings to arXiv
 
-        If the `arxiv` package is not available or initialization failed,
-        this returns an empty list so the rest of the pipeline can proceed.
-        """
-        logger.info("ArxivScholarTool: searching for: %s", query)
-        if not _HAS_ARXIV or self.client is None:
-            logger.debug(
-                "ArxivScholarTool: arxiv not available, returning empty list")
+        def _sanitize(q: str) -> str:
+            import re
+            # Remove HTML tags
+            q = re.sub(r"<[^>]+>", " ", q)
+            # Remove Markdown links/images and inline code
+            q = re.sub(r"!\[[^\]]*\]\([^)]*\)", " ", q)
+            q = re.sub(r"\[[^\]]+\]\([^)]*\)", " ", q)
+            q = re.sub(r"`[^`]*`", " ", q)
+            # Remove non-alphanumeric characters (keep spaces)
+            q = re.sub(r"[^0-9A-Za-z\s]", " ", q)
+            # Collapse whitespace and truncate
+            q = re.sub(r"\s+", " ", q).strip()
+            return q[:300]
+
+        safe_query = _sanitize(query)
+        if not safe_query:
             return []
 
         try:
             search = arxiv.Search(
-                query=query,
+                query=safe_query,
                 max_results=max_results,
                 sort_by=arxiv.SortCriterion.Relevance,
             )
             results = []
             for result in self.client.results(search):
-                results.append(
-                    {
-                        "title": result.title,
-                        "summary": result.summary.replace("\n", " "),
-                        "id": result.entry_id,
-                        "pdf_url": result.pdf_url,
-                        "published": str(result.published),
-                    }
-                )
+                results.append({
+                    "title": result.title,
+                    "summary": result.summary.replace("\n", " "),
+                    "id": result.entry_id,
+                    "pdf_url": result.pdf_url,
+                    "published": str(result.published),
+                })
             return results
-        except Exception as e:
-            logger.exception("Arxiv query error: %s", e)
+        except Exception as exc:
+            logger.exception("Arxiv query error: %s", exc)
             return []
 
     def search_arxiv(self, query: str, max_results: int = 3) -> List[Dict[str, Any]]:
-        """Backward-compatible alias used by tests and callers."""
         return self.search(query, max_results=max_results)

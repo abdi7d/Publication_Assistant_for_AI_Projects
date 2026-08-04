@@ -1,0 +1,25 @@
+[run]
+source =
+    agents
+    orchestration
+    resilience
+    security
+    tools
+    utils
+omit =
+    tests/*
+    */tests/*
+    test_routes.py
+    app.py
+    main.py
+    coverage_html/*
+    assets/*
+    ui/*
+    chroma_db/*
+    uploads/*
+    demo_sample_repo/*
+    */__pycache__/*
+    */conftest.py
+    */compat_testclient.py
+    */__init__.py
+    */__init__.py

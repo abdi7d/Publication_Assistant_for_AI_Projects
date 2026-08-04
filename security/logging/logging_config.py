@@ -1,32 +1,49 @@
+import json
 import logging
-import sys
 from logging.handlers import RotatingFileHandler
-import structlog
-from ..configs.config import settings
+from pathlib import Path
+
+from ..configs.config_loader import settings
 
 
-def configure_logging():
-    """Configure structured JSON logging with structlog and RotatingFileHandler."""
-    logging.basicConfig(level=logging.INFO, stream=sys.stdout)
+class JsonFormatter(logging.Formatter):
+    def format(self, record: logging.LogRecord) -> str:
+        payload = {
+            "timestamp": self.formatTime(record, datefmt="%Y-%m-%dT%H:%M:%S%z"),
+            "level": record.levelname,
+            "logger": record.name,
+            "message": record.getMessage(),
+        }
+        if record.exc_info:
+            payload["exception"] = self.formatException(record.exc_info)
+        if hasattr(record, "request_id"):
+            payload["request_id"] = record.request_id
+        if hasattr(record, "service"):
+            payload["service"] = record.service
+        return json.dumps(payload, default=str)
 
-    processor_chain = [
-        structlog.processors.TimeStamper(fmt="iso"),
-        structlog.processors.add_log_level,
-        structlog.processors.JSONRenderer()
-    ]
 
-    structlog.configure(
-        processors=processor_chain,
-        logger_factory=structlog.stdlib.LoggerFactory(),
-        wrapper_class=structlog.make_filtering_bound_logger(logging.INFO),
-        cache_logger_on_first_use=True,
-    )
+def configure_logging() -> None:
+    log_dir = Path(settings.LOG_DIR)
+    log_dir.mkdir(parents=True, exist_ok=True)
 
-    # File handler
-    fh = RotatingFileHandler("logs/app.log", maxBytes=10_000_000, backupCount=5)
-    fh.setLevel(logging.INFO)
-    fh.setFormatter(logging.Formatter('%(message)s'))
-    logging.getLogger().addHandler(fh)
+    root = logging.getLogger()
+    root.setLevel(getattr(logging, settings.LOG_LEVEL.upper(), logging.INFO))
+
+    for handler in list(root.handlers):
+        root.removeHandler(handler)
+        handler.close()
+
+    file_handler = RotatingFileHandler(
+        log_dir / "app.log", maxBytes=10_000_000, backupCount=5)
+    file_handler.setLevel(logging.INFO)
+    file_handler.setFormatter(JsonFormatter())
+    root.addHandler(file_handler)
+
+    stream_handler = logging.StreamHandler()
+    stream_handler.setLevel(logging.INFO)
+    stream_handler.setFormatter(JsonFormatter())
+    root.addHandler(stream_handler)
 
 
 configure_logging()

@@ -53,10 +53,10 @@ USER appuser
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --retries=3 --start-period=40s \
-    CMD curl -f http://localhost:8000/health || exit 1
+    CMD curl -f http://localhost:8001/health || exit 1
 
 # Expose port
-EXPOSE 8000
+EXPOSE 8001
 
 # Default command: Run Flask API server
-CMD ["python", "app.py", "--serve-api", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["python", "app.py", "--serve-api", "--host", "0.0.0.0", "--port", "8001"]

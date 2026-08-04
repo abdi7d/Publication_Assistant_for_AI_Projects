@@ -5,7 +5,11 @@ from fastapi import status
 def test_health_endpoint(test_client):
     r = test_client.get("/health")
     assert r.status_code == status.HTTP_200_OK
-    assert r.json().get("status") == "ok"
+    data = r.json()
+    assert data.get("status") in ["healthy", "degraded"]
+    assert "service" in data
+    assert "version" in data
+    assert "checks" in data
 
 
 @pytest.mark.skipif(True, reason="Requires full app endpoints")

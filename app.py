@@ -1,3 +1,23 @@
+from uuid import uuid4
+import time
+import threading
+from typing import Dict, List, Optional, Any
+from pydantic import BaseModel
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi import FastAPI, File, UploadFile, Request
+from starlette.middleware.trustedhost import TrustedHostMiddleware
+from typing import Dict
+import concurrent.futures
+
+from security.configs.config_loader import settings as app_settings
+from security.logging.logging_config import configure_logging
+from security.middleware.auth_middleware import AuthMiddleware, require_auth, optional_auth
+from security.middleware.rate_limit_middleware import RateLimitMiddleware
+from security.middleware.request_size_middleware import RequestSizeMiddleware
+from security.middleware.security_headers_middleware import SecurityHeadersMiddleware
+
 from tools.arxiv_scholar import ArxivScholarTool
 from tools.rag_retriever import RAGRetriever
 from tools.keyword_extractor import KeywordExtractor
@@ -10,8 +30,11 @@ from agents.metadata_recommender import MetadataRecommenderAgent
 from agents.repo_analyzer import RepoAnalyzerAgent
 from orchestration.graph import Orchestrator
 from security.validators.input_validators import validate_prompt
+from utils.publication_builder import PublicationBuilder
 from security.validators.validators import sanitize_text
 from security.validators.file_validators import validate_upload
+from security.validators.repo_validators import validate_comprehensive_submission
+from utils.error_handler import setup_error_handlers
 import gradio as gr
 import logging
 import os
@@ -20,20 +43,118 @@ import json
 import re
 from pathlib import Path
 from dotenv import load_dotenv
-from fastapi import FastAPI, File, UploadFile, Request
-from fastapi.responses import FileResponse, JSONResponse
-from fastapi.staticfiles import StaticFiles
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from typing import List, Optional
+
+PROJECT_ROOT = Path(__file__).resolve().parent
+UI_DIR = PROJECT_ROOT / "ui"
+ASSETS_DIR = PROJECT_ROOT / "assets"
+
+# Global tool cache to avoid repeated expensive initializations.
+GLOBAL_RAG_RETRIEVER: RAGRetriever | None = None
+GLOBAL_ARXIV_SCHOLAR_TOOL: ArxivScholarTool | None = None
+GLOBAL_WEB_SEARCH_TOOLS: Dict[str, WebSearchTool] = {}
+GLOBAL_REPO_PARSER: RepoParser | None = None
+GLOBAL_KEYWORD_EXTRACTOR: KeywordExtractor | None = None
 load_dotenv()
+
+# Simple in-memory job manager to track generation jobs and progress.
+
+
+class JobManager:
+    def __init__(self):
+        self._jobs: Dict[str, dict] = {}
+        self._lock = threading.Lock()
+
+    def create_job(self, meta: dict) -> str:
+        job_id = str(uuid4())
+        with self._lock:
+            self._jobs[job_id] = {
+                "id": job_id,
+                "meta": meta,
+                "state": "IDLE",
+                "steps": [],
+                "start_ts": None,
+                "end_ts": None,
+                "result": None,
+                "error": None,
+                "cancel_event": threading.Event(),
+            }
+        return job_id
+
+    def start(self, job_id: str, steps: list[str]):
+        with self._lock:
+            j = self._jobs.get(job_id)
+            if not j:
+                return
+            j["start_ts"] = time.time()
+            j["state"] = "RUNNING"
+            j["steps"] = [{"name": s, "status": "PENDING"} for s in steps]
+
+    def update_step(self, job_id: str, step_name: str, status: str, detail: str | None = None):
+        with self._lock:
+            j = self._jobs.get(job_id)
+            if not j:
+                return
+            for step in j["steps"]:
+                if step["name"] == step_name:
+                    step["status"] = status
+                    step["detail"] = detail
+                elif step["status"] == "IN_PROGRESS" and status in ("COMPLETE", "FAILED", "CANCELLED"):
+                    # if a later step completes, ensure previous in-progress is marked complete
+                    step["status"] = "COMPLETE"
+
+    def set_state(self, job_id: str, state: str):
+        with self._lock:
+            j = self._jobs.get(job_id)
+            if not j:
+                return
+            j["state"] = state
+            if state in ("SUCCESS", "ERROR", "CANCELLED"):
+                j["end_ts"] = time.time()
+
+    def set_result(self, job_id: str, result: dict):
+        with self._lock:
+            j = self._jobs.get(job_id)
+            if not j:
+                return
+            j["result"] = result
+
+    def set_error(self, job_id: str, error: str):
+        with self._lock:
+            j = self._jobs.get(job_id)
+            if not j:
+                return
+            j["error"] = error
+            j["state"] = "ERROR"
+            j["end_ts"] = time.time()
+
+    def cancel(self, job_id: str):
+        with self._lock:
+            j = self._jobs.get(job_id)
+            if not j:
+                return False
+            j["cancel_event"].set()
+            j["state"] = "CANCELLED"
+            j["end_ts"] = time.time()
+            return True
+
+    def get(self, job_id: str) -> dict | None:
+        with self._lock:
+            j = self._jobs.get(job_id)
+            if not j:
+                return None
+            # return a shallow copy to avoid races
+            return dict(j)
+
+
+GLOBAL_JOB_MANAGER = JobManager()
+GLOBAL_GRADIO_ACTIVE = False
 
 # --- Core Component Imports ---
 
 
 # --- Setup ---
 # Empty line here to maintain spacing
-logging.basicConfig(level=logging.INFO)
+configure_logging()
 logger = logging.getLogger(__name__)
 
 # Projects persistence file
@@ -43,46 +164,47 @@ SAVED_FILE = Path("saved.json")
 UPLOADS_DIR = Path("uploads")
 UPLOADS_DIR.mkdir(exist_ok=True)
 
+# File locking for safe concurrent access (cross-platform)
+import threading
+
+_file_locks: Dict[str, threading.Lock] = {}
+_file_locks_lock = threading.Lock()
+
+def get_file_lock(file_path: Path) -> threading.Lock:
+    """Get or create a lock for a specific file."""
+    path_str = str(file_path)
+    with _file_locks_lock:
+        if path_str not in _file_locks:
+            _file_locks[path_str] = threading.Lock()
+        return _file_locks[path_str]
+
 
 def load_projects():
-    if not PROJECTS_FILE.exists():
-        return {}
-    try:
-        with PROJECTS_FILE.open("r", encoding="utf-8") as f:
-            return json.load(f)
-    except Exception:
-        return {}
+    lock = get_file_lock(PROJECTS_FILE)
+    with lock:
+        if not PROJECTS_FILE.exists():
+            return {}
+        try:
+            with PROJECTS_FILE.open("r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            return {}
 
 
 def save_project(project_id: str, repo_url: str, metadata: dict = None):
-    projects = load_projects()
-    projects[project_id] = {"repo_url": repo_url, "metadata": metadata or {}}
-    with PROJECTS_FILE.open("w", encoding="utf-8") as f:
-        json.dump(projects, f, indent=2)
+    lock = get_file_lock(PROJECTS_FILE)
+    with lock:
+        projects = load_projects()
+        projects[project_id] = {"repo_url": repo_url, "metadata": metadata or {}}
+        with PROJECTS_FILE.open("w", encoding="utf-8") as f:
+            json.dump(projects, f, indent=2)
     return list(projects.keys())
 
 
 def validate_submission(repo_url: str, goal: str = "", project_desc: str = "") -> tuple[bool, str]:
     """Validate repository and prompt inputs before running the agent pipeline."""
-    repo_url = sanitize_text(repo_url or "")
-    goal = sanitize_text(goal or "")
-    project_desc = sanitize_text(project_desc or "")
-
-    if not repo_url:
-        return False, "Repository URL is required."
-
-    if len(repo_url) > 2000:
-        return False, "Repository URL is too long."
-
-    if any(token in repo_url.lower() for token in ["<script", "javascript:", "data:"]):
-        return False, "Repository URL contains unsupported characters."
-
-    combined_input = "\n".join([repo_url, goal, project_desc])
-    ok, error = validate_prompt(combined_input)
-    if not ok:
-        return False, error or "Input contains invalid or unsafe content."
-
-    return True, ""
+    # Use comprehensive validation
+    return validate_comprehensive_submission(repo_url, goal, project_desc)
 
 
 def slugify(text: str) -> str:
@@ -95,12 +217,26 @@ def slugify(text: str) -> str:
     return text
 
 
+def _run_generation_with_timeout(timeout_seconds: int, *args, **kwargs):
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+        future = executor.submit(generate_full_article, *args, **kwargs)
+        try:
+            return future.result(timeout=timeout_seconds), None
+        except concurrent.futures.TimeoutError:
+            future.cancel()
+            return None, f"Generation timed out after {timeout_seconds} seconds."
+        except Exception as exc:
+            return None, str(exc)
+
+
 def delete_project(project_id: str):
-    projects = load_projects()
-    if project_id in projects:
-        projects.pop(project_id)
-        with PROJECTS_FILE.open("w", encoding="utf-8") as f:
-            json.dump(projects, f, indent=2)
+    lock = get_file_lock(PROJECTS_FILE)
+    with lock:
+        projects = load_projects()
+        if project_id in projects:
+            projects.pop(project_id)
+            with PROJECTS_FILE.open("w", encoding="utf-8") as f:
+                json.dump(projects, f, indent=2)
     return list(projects.keys())
 
 
@@ -116,21 +252,64 @@ def render_tags_as_html(tags: list) -> str:
 
 
 def clean_generated_content(text: str) -> str:
-    """Remove markdown decoration and tag-like noise from generated content."""
+    """Preserve rich Markdown structure while keeping Mermaid blocks intact."""
     if not text:
         return ""
 
-    cleaned = re.sub(r"!\[[^\]]*\]\([^)]*\)", "", text)
-    cleaned = re.sub(r"\[[^\]]+\]\([^)]*\)", "", cleaned)
-    cleaned = re.sub(r"(?m)^#{1,6}\s+", "", cleaned)
-    cleaned = re.sub(r"\*\*(.*?)\*\*", r"\1", cleaned)
-    cleaned = re.sub(r"\*(.*?)\*", r"\1", cleaned)
-    cleaned = re.sub(r"`([^`]+)`", r"\1", cleaned)
-    cleaned = re.sub(r"<[^>]+>", "", cleaned)
-    cleaned = re.sub(r"(?m)^[-*]\s+", "", cleaned)
-    cleaned = re.sub(r"(?m)^\d+\.\s+", "", cleaned)
-    cleaned = re.sub(r"\n{3,}", "\n\n", cleaned)
-    return cleaned.strip()
+    mermaid_blocks: list[str] = []
+
+    def _protect_mermaid(match: re.Match[str]) -> str:
+        block = match.group(0)
+        token = f"MERMAID_BLOCK_{len(mermaid_blocks)}"
+        mermaid_blocks.append(block)
+        return token
+
+    protected = re.sub(
+        r"```(?:mermaid|[a-zA-Z0-9_-]+)[\s\S]*?```", _protect_mermaid, text)
+
+    cleaned = protected.replace("\r\n", "\n")
+    # Remove image markdown entirely
+    cleaned = re.sub(r"!\[[^\]]*\]\([^)]*\)", "", cleaned)
+
+    # Remove top-level H1 headings
+    cleaned = re.sub(r"^#\s.*$\n?", "", cleaned, flags=re.M)
+
+    # Convert link markdown [text](url) -> text
+    cleaned = re.sub(r"\[([^\]]+)\]\([^)]*\)", r"\1", cleaned)
+
+    # Preserve bold-only lines while stripping inline emphasis noise.
+    standalone_bolds: list[str] = []
+
+    def _protect_standalone_bold(match: re.Match[str]) -> str:
+        token = f"__STANDALONE_BOLD_{len(standalone_bolds)}__"
+        standalone_bolds.append(match.group(0))
+        return token
+
+    cleaned = re.sub(
+        r"^(?:\*\*|__)([^\n*]+?)(?:\*\*|__)\s*$",
+        _protect_standalone_bold,
+        cleaned,
+        flags=re.M,
+    )
+    cleaned = re.sub(r"(?<!\*)\*\*([^\n*]+?)\*\*(?!\*)", r"\1", cleaned)
+    cleaned = re.sub(r"(?<!_)__([^\n_]+?)__(?!_)", r"\1", cleaned)
+
+    for index, block in enumerate(standalone_bolds):
+        cleaned = cleaned.replace(f"__STANDALONE_BOLD_{index}__", block)
+
+    # Remove simple HTML tags but keep their inner text
+    cleaned = re.sub(r"<(/?)[^>]+>", "", cleaned)
+
+    # Remove list markers at line starts (retain the content)
+    cleaned = re.sub(r"^[\s]*[-*+]\s+", "", cleaned, flags=re.M)
+
+    # Collapse excessive newlines
+    cleaned = re.sub(r"\n{3,}", "\n\n", cleaned).strip()
+
+    for index, block in enumerate(mermaid_blocks):
+        cleaned = cleaned.replace(f"MERMAID_BLOCK_{index}", block)
+
+    return cleaned
 
 # --- Logic Functions ---
 
@@ -161,17 +340,56 @@ def validate_repo_logic(repo_url):
             return f"❌ Validation Error: {str(e)}", ""
 
 
-def generate_full_article(repo_url, style, length, model, goal, project_desc, provider=None):
-    """The main generation pipeline triggered by the 'Generate' button."""
+def generate_full_article(repo_url, style, length, model, goal, project_desc, provider=None,
+                          job_id: str | None = None, progress_callback=None, cancel_event: threading.Event | None = None):
+    """The main generation pipeline triggered by the 'Generate' button.
+
+    Optional args:
+      job_id: associate this run with a JobManager job id
+      progress_callback: callable(job_id, step_name, status, detail)
+      cancel_event: threading.Event used to allow cancellation
+    """
+    # VALIDATING
+    if progress_callback:
+        try:
+            progress_callback(job_id, "VALIDATING",
+                              "IN_PROGRESS", "Validating inputs")
+        except Exception:
+            pass
+
     ok, msg = validate_submission(repo_url, goal, project_desc)
     if not ok:
+        if progress_callback:
+            try:
+                progress_callback(job_id, "VALIDATING", "FAILED", msg)
+                progress_callback(job_id, None, "ERROR", msg)
+            except Exception:
+                pass
         return "Error", "Error", "", msg
 
     try:
-        # Instantiate Tools & Agents
-        parser, kw, rag = RepoParser(), KeywordExtractor(), RAGRetriever()
-        web = WebSearchTool(selected_model=model, provider=provider)
-        scholar = ArxivScholarTool()
+        # Instantiate tools once and reuse them across requests to improve UI responsiveness.
+        global GLOBAL_REPO_PARSER, GLOBAL_KEYWORD_EXTRACTOR, GLOBAL_RAG_RETRIEVER
+        global GLOBAL_WEB_SEARCH_TOOLS, GLOBAL_ARXIV_SCHOLAR_TOOL
+
+        if GLOBAL_REPO_PARSER is None:
+            GLOBAL_REPO_PARSER = RepoParser()
+        if GLOBAL_KEYWORD_EXTRACTOR is None:
+            GLOBAL_KEYWORD_EXTRACTOR = KeywordExtractor()
+        if GLOBAL_RAG_RETRIEVER is None:
+            GLOBAL_RAG_RETRIEVER = RAGRetriever()
+        if GLOBAL_ARXIV_SCHOLAR_TOOL is None:
+            GLOBAL_ARXIV_SCHOLAR_TOOL = ArxivScholarTool()
+
+        search_key = f"{provider}:{model}"
+        if search_key not in GLOBAL_WEB_SEARCH_TOOLS:
+            GLOBAL_WEB_SEARCH_TOOLS[search_key] = WebSearchTool(
+                selected_model=model, provider=provider)
+        web = GLOBAL_WEB_SEARCH_TOOLS[search_key]
+        parser = GLOBAL_REPO_PARSER
+        kw = GLOBAL_KEYWORD_EXTRACTOR
+        rag = GLOBAL_RAG_RETRIEVER
+        scholar = GLOBAL_ARXIV_SCHOLAR_TOOL
         agents = {
             "repo_analyzer": RepoAnalyzerAgent(repo_url, parser),
             "metadata_recommender": MetadataRecommenderAgent(kw),
@@ -180,68 +398,214 @@ def generate_full_article(repo_url, style, length, model, goal, project_desc, pr
             "fact_checker": FactCheckerAgent(scholar),
         }
 
+        # Define job steps
+        steps = [
+            "VALIDATING",
+            "ANALYZING",
+            "UNDERSTANDING",
+            "GENERATING",
+            "WRITING",
+            "CREATING_DIAGRAMS",
+            "REVIEWING",
+            "FINALIZING",
+        ]
+
+        if job_id and progress_callback:
+            try:
+                progress_callback(job_id, None, "STARTED", "Starting pipeline")
+            except Exception:
+                pass
+
         # Run Pipeline
+        if progress_callback:
+            try:
+                progress_callback(job_id, "ANALYZING",
+                                  "IN_PROGRESS", "Parsing repository")
+            except Exception:
+                pass
+
+        if cancel_event and cancel_event.is_set():
+            if progress_callback:
+                progress_callback(job_id, None, "CANCELLED",
+                                  "Cancelled before run")
+            raise Exception("Cancelled")
+
         orch = Orchestrator()
         result = orch.run_pipeline(agents, repo_url, style=style, goal=goal)
+
+        if progress_callback:
+            try:
+                progress_callback(job_id, "ANALYZING",
+                                  "COMPLETE", "Repository parsed")
+                progress_callback(job_id, "UNDERSTANDING",
+                                  "IN_PROGRESS", "Understanding project")
+            except Exception:
+                pass
+
+        if cancel_event and cancel_event.is_set():
+            if progress_callback:
+                progress_callback(job_id, None, "CANCELLED",
+                                  "User requested cancellation")
+            raise Exception("Cancelled")
 
         analysis = result.get("analysis")
         metadata = result.get("metadata")
         content_impr = result.get("content_improvement")
 
-        # Formatting Output
         title = getattr(metadata, 'title_suggestions', ["Untitled Project"])[0]
         subtitle = getattr(metadata, 'short_description',
                            project_desc or "Analysis Result")
         tags = getattr(metadata, 'tags', ["AI", "Research"])
 
-        # Render tags as HTML pill badges (only once, at the top)
         tags_html = render_tags_as_html(tags)
-
-        # Build structured body: only one title, add 'Project Tags' subtitle above tags, and ensure tags are not repeated in the body
-        # Compose output: title, 'Project Tags' subtitle, tags, then cleaned body
         out_title = f"# {title}"
         out_tags = '<div style="margin-top: 10px; margin-bottom: 2px; font-weight: bold; font-size: 18px;">Project Tags</div>' + tags_html
-        improved_readme = getattr(
-            content_impr, 'improved_readme', "No improvements generated.")
 
-        cleaned_body = clean_generated_content(improved_readme)
-        lines = cleaned_body.splitlines()
-        cleaned_lines = []
-        skip = True
-        for line in lines:
-            if skip and not line.strip():
-                continue
-            if skip and (re.match(r'^\s*Project Tags', line, re.IGNORECASE) or re.match(r'^\s*Tags', line, re.IGNORECASE)):
-                continue
-            if skip and (re.match(r'^\s*#{1,3} ', line) or re.match(r'^\s*<div', line) or re.match(r'^\s*<span', line)):
-                continue
-            if skip and line.strip() and not (re.match(r'^\s*#{1,3} ', line) or re.match(r'^\s*Project Tags', line, re.IGNORECASE) or re.match(r'^\s*Tags', line, re.IGNORECASE) or re.match(r'^\s*<div', line) or re.match(r'^\s*<span', line)):
-                skip = False
-            if not skip:
-                cleaned_lines.append(line)
-        body = '\n'.join(cleaned_lines).lstrip(
-            '\n') or "No improvements generated."
-        body = clean_generated_content(body)
+        # Prefer improved README from the ContentImprover agent when available.
+        publication_readme = None
+        if content_impr and getattr(content_impr, 'improved_readme', None):
+            publication_readme = getattr(content_impr, 'improved_readme')
+        else:
+            publication_readme = result.get("publication_readme")
+            if not publication_readme:
+                builder = PublicationBuilder()
+                publication_readme = builder.build_readme(
+                    repo_analysis=analysis,
+                    metadata=metadata,
+                    repo_source=repo_url,
+                    style=style,
+                    goal=goal,
+                )
 
-        # Only return one title, then tags, then body (no subtitle)
+        if progress_callback:
+            try:
+                progress_callback(job_id, "GENERATING",
+                                  "COMPLETE", "AI agents completed")
+                progress_callback(job_id, "WRITING",
+                                  "IN_PROGRESS", "Composing content")
+            except Exception:
+                pass
+
+        # Clean and normalize the produced markdown for UI consumption.
+        body = clean_generated_content(
+            publication_readme or "No improvements generated.")
+
+        if progress_callback:
+            try:
+                progress_callback(job_id, "WRITING",
+                                  "COMPLETE", "Content written")
+                progress_callback(job_id, "CREATING_DIAGRAMS",
+                                  "IN_PROGRESS", "Creating diagrams")
+                progress_callback(job_id, "CREATING_DIAGRAMS",
+                                  "COMPLETE", "Diagrams ready")
+                progress_callback(job_id, "REVIEWING",
+                                  "IN_PROGRESS", "Reviewing content")
+                progress_callback(job_id, "REVIEWING",
+                                  "COMPLETE", "Review complete")
+                progress_callback(job_id, "FINALIZING",
+                                  "IN_PROGRESS", "Finalizing package")
+                progress_callback(job_id, "FINALIZING",
+                                  "COMPLETE", "Packaging complete")
+                progress_callback(job_id, None, "SUCCESS",
+                                  "Generation completed")
+            except Exception:
+                pass
+
         return out_title, "", out_tags, body
 
     except Exception as e:
         logger.exception("Generation failed")
+        if progress_callback:
+            try:
+                progress_callback(job_id, None, "ERROR", str(e))
+            except Exception:
+                pass
         return "Error", "Error", "", f"Pipeline failed: {str(e)}"
 
 
 # --- FastAPI app setup ---
 
-app = FastAPI(title="Publication Assistant", version="1.0.0")
+app = FastAPI(
+    title=app_settings.APP_NAME,
+    version="1.1.0",
+    description="Production-grade publication assistant for AI projects.",
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_url="/openapi.json",
+)
 
+# Security middleware
+app.add_middleware(
+    TrustedHostMiddleware,
+    allowed_hosts=app_settings.ALLOWED_HOSTS if app_settings.ALLOWED_HOSTS != ["*"] else ["localhost", "127.0.0.1", "testserver"]
+)
+
+# Secure CORS configuration - only allow specific origins in production
+cors_origins = app_settings.CORS_ORIGINS if app_settings.CORS_ORIGINS != ["*"] else ["http://localhost:7860", "http://127.0.0.1:7860"]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=cors_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],  # Restrict methods
+    allow_headers=["Content-Type", "Authorization", "X-Request-ID"],  # Restrict headers
 )
+
+# Add rate limiting middleware
+app.add_middleware(RateLimitMiddleware)
+
+# Add request size validation middleware
+app.add_middleware(RequestSizeMiddleware)
+
+# Add security headers middleware
+app.add_middleware(SecurityHeadersMiddleware)
+
+# Setup error handlers
+setup_error_handlers(app)
+
+
+@app.middleware("http")
+async def add_request_context(request: Request, call_next):
+    request_id = request.headers.get("x-request-id") or str(uuid4())
+    correlation_id = request.headers.get("x-correlation-id") or request_id
+    
+    # Attach to request state for use in endpoints
+    request.state.request_id = request_id
+    request.state.correlation_id = correlation_id
+    
+    start = time.perf_counter()
+    try:
+        response = await call_next(request)
+    except Exception:
+        logger.exception("Unhandled request error", extra={
+                         "request_id": request_id, "correlation_id": correlation_id, "service": app_settings.APP_NAME})
+        raise
+    duration_ms = (time.perf_counter() - start) * 1000
+    response.headers["x-request-id"] = request_id
+    response.headers["x-correlation-id"] = correlation_id
+    logger.info(
+        "request_completed",
+        extra={
+            "request_id": request_id,
+            "correlation_id": correlation_id,
+            "service": app_settings.APP_NAME,
+            "method": request.method,
+            "path": request.url.path,
+            "status_code": response.status_code,
+            "duration_ms": round(duration_ms, 3),
+        },
+    )
+    return response
+
+
+@app.exception_handler(Exception)
+async def handle_unexpected_error(request: Request, exc: Exception):
+    logger.exception("unexpected_error", extra={"request_id": request.headers.get(
+        "x-request-id") or str(uuid4()), "service": app_settings.APP_NAME})
+    return JSONResponse(
+        status_code=500,
+        content={"error": "internal_server_error",
+                 "message": "An unexpected server error occurred."},
+    )
 
 
 def _load_json(path: Path):
@@ -257,6 +621,22 @@ def _save_json(path: Path, data):
     path.write_text(json.dumps(data, indent=2), encoding="utf-8")
 
 
+DEFAULT_MODEL_NAME = "Gemini 1.5 Flash Latest (Google)"
+
+MODEL_MAP = {
+    "Gemini 3.6 Flash (Google)": ("google", "gemini-3.6-flash"),
+    "Gemini 3.5 Flash (Google)": ("google", "gemini-3.5-flash"),
+    "Gemini 3.5 Flash-Lite (Google)": ("google", "gemini-3.5-flash-lite"),
+    "Gemini 1.5 Flash Latest (Google)": ("google", "gemini-1.5-flash-latest"),
+    "Gemini 1.0 Pro (Google)": ("google", "gemini-1.0-pro"),
+    "Llama 4 Scout (Groq)": ("groq", "meta-llama/llama-4-scout-17b-16e-instruct"),
+    "Llama 4 Maverick (Groq)": ("groq", "meta-llama/llama-4-maverick-17b-128e-instruct"),
+    "Groq Llama-3.1-8B-Instant (Groq)": ("groq", "meta-llama/llama-3.1-8b-instant"),
+    "Groq Mixtral-8x7B-32768 (Groq)": ("groq", "meta-llama/mixtral-8x7b-32768"),
+    "Heuristic Fallback (No LLM)": ("none", "heuristic"),
+}
+
+
 class ValidateRequest(BaseModel):
     repo_url: str
 
@@ -265,7 +645,7 @@ class GenerateRequest(BaseModel):
     repo_url: str
     style: str = "Technical Blog"
     length: str = "Medium"
-    model: str = "gemini-1.5-flash-latest"
+    model: str = DEFAULT_MODEL_NAME
     goal: str = ""
     project_desc: str = ""
     project_id: Optional[str] = None
@@ -294,9 +674,64 @@ def register_fastapi_routes(app: FastAPI):
     async def index():
         return FileResponse(path="ui/index.html", media_type="text/html")
 
+    @app.get("/index.html")
+    async def page_index_html():
+        return FileResponse(path="ui/index.html", media_type="text/html")
+
     @app.get("/health")
     async def health_check():
-        return {"status": "ok", "service": "publication-assistant"}
+        """Comprehensive health check with dependency verification."""
+        health_status = {
+            "status": "healthy",
+            "service": app_settings.APP_NAME,
+            "environment": app_settings.APP_ENV,
+            "version": "1.1.0",
+            "checks": {}
+        }
+        
+        # Check critical dependencies
+        try:
+            import langgraph
+            health_status["checks"]["langgraph"] = "ok"
+        except ImportError:
+            health_status["checks"]["langgraph"] = "missing"
+            health_status["status"] = "degraded"
+        
+        try:
+            import chromadb
+            health_status["checks"]["chromadb"] = "ok"
+        except ImportError:
+            health_status["checks"]["chromadb"] = "missing"
+            health_status["status"] = "degraded"
+        
+        try:
+            import google.genai
+            health_status["checks"]["google_genai"] = "ok"
+        except ImportError:
+            health_status["checks"]["google_genai"] = "missing"
+            health_status["status"] = "degraded"
+        
+        # Check critical directories
+        health_status["checks"]["uploads_dir"] = "ok" if UPLOADS_DIR.exists() else "missing"
+        health_status["checks"]["logs_dir"] = "ok" if Path(app_settings.LOG_DIR).exists() else "missing"
+        
+        # Check environment variables
+        health_status["checks"]["google_api_key"] = "configured" if os.getenv("GOOGLE_API_KEY") else "missing"
+        health_status["checks"]["groq_api_key"] = "configured" if os.getenv("GROQ_API_KEY") else "missing"
+        
+        # Overall status
+        if health_status["status"] == "degraded":
+            return JSONResponse(content=health_status, status_code=503)
+        
+        return health_status
+
+    @app.get("/ready")
+    async def readiness_check():
+        return {"status": "ready", "service": app_settings.APP_NAME}
+
+    @app.get("/live")
+    async def liveness_check():
+        return {"status": "alive", "service": app_settings.APP_NAME}
 
     @app.get("/analytics.html")
     async def page_analytics():
@@ -336,23 +771,67 @@ def register_fastapi_routes(app: FastAPI):
         msg, tree = validate_repo_logic(repo_url)
         return {"message": msg, "tree": tree}
 
+    @app.post("/api/upload")
+    async def api_upload(files: list[UploadFile] = File(...)):
+        saved_items = []
+        for upload in files:
+            content = await upload.read()
+            ok, message = validate_upload(
+                content, upload.filename, upload.content_type)
+            if not ok:
+                return JSONResponse(status_code=400, content={"error": message})
+            filename = os.path.basename(upload.filename)
+            target = UPLOADS_DIR / filename
+            with target.open("wb") as f:
+                f.write(content)
+            saved_items.append(
+                {"filename": filename, "content_type": upload.content_type})
+        return {"saved": saved_items}
+
     @app.post("/api/generate")
     async def api_generate(request: GenerateRequest):
+        import time
+        start_ts = time.time()
         final_url = request.repo_url
-        model_map = {
-            "Gemini 3.6 Flash (Google)": ("google", "gemini-3.6-flash"),
-            "Gemini 3.5 Flash (Google)": ("google", "gemini-3.5-flash"),
-            "Gemini 3.5 Flash-Lite (Google)": ("google", "gemini-3.5-flash-lite"),
-            "Llama 4 Scout (Groq)": ("groq", "meta-llama/llama-4-scout-17b-16e-instruct"),
-            "Llama 4 Maverick (Groq)": ("groq", "meta-llama/llama-4-maverick-17b-128e-instruct"),
-            "Heuristic Fallback (No LLM)": ("none", "heuristic")
-        }
-        provider, model_id = model_map.get(
-            request.model, ("google", "gemini-1.5-flash-latest"))
+        provider, model_id = MODEL_MAP.get(
+            request.model, MODEL_MAP[DEFAULT_MODEL_NAME])
 
-        title, sub, tags, body = generate_full_article(
-            final_url, request.style, request.length, model_id,
-            request.goal, request.project_desc, provider)
+        timeout_seconds = 90
+        result, error = _run_generation_with_timeout(
+            timeout_seconds,
+            final_url,
+            request.style,
+            request.length,
+            model_id,
+            request.goal,
+            request.project_desc,
+            provider,
+        )
+
+        if error:
+            logger.warning("/api/generate timed out or failed: %s", error)
+            return {
+                "title": "Error",
+                "subtitle": "",
+                "tags": [],
+                "body": f"Generation failed: {error}",
+                "projects": list(load_projects().keys()),
+                "status": "error",
+                "generation_time_seconds": round(time.time() - start_ts, 3),
+                "error": error,
+            }
+
+        title, sub, tags, body = result
+        generation_time = round(time.time() - start_ts, 3)
+        is_error = (
+            title == "Error"
+            or sub == "Error"
+            or isinstance(body, str) and (
+                body.startswith("Generation failed")
+                or body.startswith("Pipeline failed")
+                or body.startswith("Error")
+            )
+        )
 
         if request.project_id:
             try:
@@ -366,8 +845,113 @@ def register_fastapi_routes(app: FastAPI):
             "subtitle": sub,
             "tags": tags,
             "body": body,
-            "projects": list(load_projects().keys())
+            "projects": list(load_projects().keys()),
+            "status": "error" if is_error else "done",
+            "generation_time_seconds": generation_time,
         }
+
+    @app.post("/api/generate_async")
+    async def api_generate_async(request: GenerateRequest):
+        """Start an asynchronous generation job and return a job_id for polling."""
+        final_url = request.repo_url
+        provider, model_id = MODEL_MAP.get(
+            request.model, MODEL_MAP[DEFAULT_MODEL_NAME])
+
+        job_meta = {"repo_url": final_url,
+                    "model": model_id, "style": request.style}
+        job_id = GLOBAL_JOB_MANAGER.create_job(job_meta)
+
+        steps = [
+            "VALIDATING",
+            "ANALYZING",
+            "UNDERSTANDING",
+            "GENERATING",
+            "WRITING",
+            "CREATING_DIAGRAMS",
+            "REVIEWING",
+            "FINALIZING",
+        ]
+        GLOBAL_JOB_MANAGER.start(job_id, steps)
+
+        def progress_cb(jid, step, status, detail=None):
+            # normalize
+            if step:
+                GLOBAL_JOB_MANAGER.update_step(jid, step, status, detail)
+            else:
+                # top-level state updates
+                if status == "STARTED":
+                    GLOBAL_JOB_MANAGER.set_state(jid, "RUNNING")
+                elif status == "SUCCESS":
+                    GLOBAL_JOB_MANAGER.set_state(jid, "SUCCESS")
+                elif status == "ERROR":
+                    GLOBAL_JOB_MANAGER.set_state(jid, "ERROR")
+                    GLOBAL_JOB_MANAGER.set_error(jid, detail or "error")
+                elif status == "CANCELLED":
+                    GLOBAL_JOB_MANAGER.set_state(jid, "CANCELLED")
+
+        def runner():
+            start_ts = time.time()
+            try:
+                out_title, out_sub, out_tags, out_body = generate_full_article(
+                    final_url, request.style, request.length, model_id, request.goal, request.project_desc,
+                    provider, job_id, progress_callback=progress_cb, cancel_event=GLOBAL_JOB_MANAGER.get(job_id)["cancel_event"])
+
+                gen_time = round(time.time() - start_ts, 3)
+                result = {
+                    "title": out_title,
+                    "subtitle": out_sub,
+                    "tags": out_tags,
+                    "body": out_body,
+                    "generation_time_seconds": gen_time,
+                }
+                GLOBAL_JOB_MANAGER.set_result(job_id, result)
+                GLOBAL_JOB_MANAGER.set_state(job_id, "SUCCESS")
+            except Exception as exc:
+                GLOBAL_JOB_MANAGER.set_error(job_id, str(exc))
+
+        t = threading.Thread(target=runner, daemon=True)
+        t.start()
+        return {"job_id": job_id}
+
+    @app.get("/api/generate_status")
+    async def api_generate_status(job_id: str):
+        j = GLOBAL_JOB_MANAGER.get(job_id)
+        if not j:
+            return JSONResponse(status_code=404, content={"error": "job not found"})
+        # compute progress percent
+        total = len(j.get("steps") or [])
+        done = sum(1 for s in (j.get("steps") or []) if s.get(
+            "status") in ("COMPLETE", "COMPLETE", "FAILED"))
+        percent = int(
+            (done / total) * 100) if total else (100 if j.get("state") == "SUCCESS" else 0)
+        resp = {
+            "id": j.get("id"),
+            "state": j.get("state"),
+            "steps": j.get("steps"),
+            "start_ts": j.get("start_ts"),
+            "end_ts": j.get("end_ts"),
+            "percent": percent,
+            "error": j.get("error"),
+        }
+        return resp
+
+    @app.post("/api/generate_cancel")
+    async def api_generate_cancel(req: Request):
+        data = await req.json()
+        job_id = data.get("job_id")
+        if not job_id:
+            return JSONResponse(status_code=400, content={"error": "missing job_id"})
+        ok = GLOBAL_JOB_MANAGER.cancel(job_id)
+        return {"ok": bool(ok)}
+
+    @app.get("/api/generate_result")
+    async def api_generate_result(job_id: str):
+        j = GLOBAL_JOB_MANAGER.get(job_id)
+        if not j:
+            return JSONResponse(status_code=404, content={"error": "job not found"})
+        if j.get("result"):
+            return j.get("result")
+        return JSONResponse(status_code=202, content={"status": j.get("state")})
 
     @app.get("/api/projects")
     async def api_projects_get():
@@ -410,8 +994,12 @@ def register_fastapi_routes(app: FastAPI):
 
     @app.delete("/api/saved")
     async def api_saved_delete(request: Request):
-        data = await request.json()
-        key = data.get('key')
+        data = {}
+        try:
+            data = await request.json()
+        except Exception:
+            data = {}
+        key = data.get('key') or request.query_params.get('key')
         if not key:
             return {"error": "missing key"}
         saved = _load_json(SAVED_FILE)
@@ -452,8 +1040,10 @@ def register_fastapi_routes(app: FastAPI):
             "contact": "abdid.yadata@gmail.com"
         }
 
-    if Path("ui").exists():
-        app.mount("/static", StaticFiles(directory="ui"), name="static")
+    if UI_DIR.exists():
+        app.mount("/static", StaticFiles(directory=str(UI_DIR)), name="static")
+    if ASSETS_DIR.exists():
+        app.mount("/assets", StaticFiles(directory=str(ASSETS_DIR)), name="assets")
 
 
 register_fastapi_routes(app)
@@ -472,15 +1062,7 @@ def on_validate(url, mode, existing_sel):
 
 
 def on_generate(url, style, length, model, goal, desc, mode, existing_sel, new_id=None):
-    model_map = {
-        "Gemini 3.6 Flash (Google)": ("google", "gemini-3.6-flash"),
-        "Gemini 3.5 Flash (Google)": ("google", "gemini-3.5-flash"),
-        "Gemini 3.5 Flash-Lite (Google)": ("google", "gemini-3.5-flash-lite"),
-        "Llama 4 Scout (Groq)": ("groq", "meta-llama/llama-4-scout-17b-16e-instruct"),
-        "Llama 4 Maverick (Groq)": ("groq", "meta-llama/llama-4-maverick-17b-128e-instruct"),
-        "Heuristic Fallback (No LLM)": ("none", "heuristic")
-    }
-    provider, model_id = model_map.get(model, ("google", "gemini-3.6-flash"))
+    provider, model_id = MODEL_MAP.get(model, MODEL_MAP[DEFAULT_MODEL_NAME])
 
     projects = load_projects()
     final_url = url
@@ -526,6 +1108,70 @@ def on_generate(url, style, length, model, goal, desc, mode, existing_sel, new_i
     )
 
 
+def on_generate_stream(url, style, length, model, goal, desc, mode, existing_sel):
+    """Generator-based Gradio handler that streams progress updates while
+    the synchronous pipeline runs in a background thread.
+    Outputs: (output_container_visible, title, subtitle, tags_html, body, existing_proj_dropdown, progress_md)
+    """
+    projects = load_projects()
+    provider, model_id = MODEL_MAP.get(model, MODEL_MAP[DEFAULT_MODEL_NAME])
+
+    final_url = url
+    project_id_to_save = None
+    if mode == "Use Existing Project" and existing_sel:
+        proj = projects.get(existing_sel)
+        if proj:
+            final_url = proj.get("repo_url", url)
+            project_id_to_save = existing_sel
+    else:
+        project_id_to_save = slugify(final_url) or "project"
+
+    progress_lines = []
+    result = {}
+
+    def progress_cb(job_id, step, status, detail=None):
+        # append a human-friendly progress line
+        label = (step or "STATE").replace("_", " ")
+        line = f"{label}: {status} {('- ' + str(detail)) if detail else ''}"
+        progress_lines.append(line)
+
+    def runner():
+        try:
+            title, sub, tags_html, body = generate_full_article(
+                final_url, style, length, model_id, goal, desc, provider,
+                job_id=None, progress_callback=progress_cb)
+            result['title'] = title
+            result['subtitle'] = sub
+            result['tags'] = tags_html
+            result['body'] = body
+        except Exception as e:
+            result['error'] = str(e)
+
+    t = threading.Thread(target=runner, daemon=True)
+    t.start()
+
+    # initial yield: show container and an empty progress box
+    yield gr.update(visible=True), "", "", "", "", gr.update(choices=list(load_projects().keys()), value=project_id_to_save or "", visible=True), "Starting..."
+
+    # stream while running
+    while t.is_alive() or progress_lines:
+        if progress_lines:
+            out = "<br/>".join(progress_lines)
+            progress_lines.clear()
+            yield gr.update(visible=True), gr.update(value=""), gr.update(value=""), gr.update(value=""), gr.update(value=""), gr.update(choices=list(load_projects().keys()), value=project_id_to_save or "", visible=True), out
+        else:
+            # yield a heartbeat so the frontend stays responsive
+            yield gr.update(visible=True), gr.update(value=""), gr.update(value=""), gr.update(value=""), gr.update(value=""), gr.update(choices=list(load_projects().keys()), value=project_id_to_save or "", visible=True), "Working..."
+        time.sleep(0.6)
+
+    # final result
+    if result.get('error'):
+        final_progress = f"Error: {result.get('error')}"
+        yield gr.update(visible=True), "Error", "", "", final_progress, gr.update(choices=list(load_projects().keys()), value=project_id_to_save or "", visible=True), final_progress
+    else:
+        yield gr.update(visible=True), result.get('title', ''), result.get('subtitle', ''), result.get('tags', ''), result.get('body', ''), gr.update(choices=list(load_projects().keys()), value=project_id_to_save or "", visible=True), "Completed"
+
+
 def on_mode_change(mode):
     projects = load_projects()
     has_existing = len(projects) > 0
@@ -569,8 +1215,8 @@ def on_delete(selected):
     )
 
 
-def create_gradio_demo():
-    with gr.Blocks(theme=gr.themes.Soft()) as demo:
+def create_gradio_demo():  # pragma: no cover
+    with gr.Blocks() as demo:
 
         with gr.Row():
             # --- LEFT SIDEBAR (Config Area) ---
@@ -666,7 +1312,7 @@ def create_gradio_demo():
                         )
 
                         generate_btn = gr.Button(
-                            "🚀 Generate Article", variant="primary")
+                            "🚀 Generate", variant="primary")
 
                         with gr.Column(visible=False) as output_container:
                             gr.Markdown("---")
@@ -674,17 +1320,18 @@ def create_gradio_demo():
                             out_sub = gr.Markdown()
                             out_tags = gr.HTML()  # Changed to HTML for pill badges
                             out_body = gr.Markdown()
+                            progress_md = gr.Markdown(visible=True)
 
         # --- Event Handling ---
         validate_btn.click(on_validate, inputs=[
                            repo_url_input, proj_mode, existing_proj_dropdown], outputs=[val_msg, tree_viewer])
 
         generate_btn.click(
-            on_generate,
+            on_generate_stream,
             inputs=[repo_url_input, style_input, length_input, model_input,
                     goal_input, desc_input, proj_mode, existing_proj_dropdown],
             outputs=[output_container, out_title, out_sub,
-                     out_tags, out_body, existing_proj_dropdown]
+                     out_tags, out_body, existing_proj_dropdown, progress_md]
         )
 
         proj_mode.change(on_mode_change, inputs=[proj_mode], outputs=[
@@ -699,8 +1346,13 @@ def create_gradio_demo():
     return demo
 
 
+def _activate_gradio_mode():
+    global GLOBAL_GRADIO_ACTIVE
+    GLOBAL_GRADIO_ACTIVE = True
+
+
 # --- Launch ---
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     import argparse
     import uvicorn
 
@@ -709,7 +1361,7 @@ if __name__ == "__main__":
                         help="Serve the static UI from ui/ and expose API endpoints")
     parser.add_argument("--host", default="0.0.0.0",
                         help="Host for the web server")
-    parser.add_argument("--port", type=int, default=8000,
+    parser.add_argument("--port", type=int, default=8001,
                         help="Port for the web server")
     args = parser.parse_args()
 
@@ -721,4 +1373,7 @@ if __name__ == "__main__":
         uvicorn.run(app, host=args.host, port=args.port, log_level="info")
     else:
         demo = create_gradio_demo()
+        # Activate demo mode so on_generate uses async job flow
+        _activate_gradio_mode()
+        # Launch without theme parameter (compatibility fix)
         demo.launch()

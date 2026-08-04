@@ -1,24 +1,141 @@
 <!doctype html>
-<html lang="en">
+<html class="dark" lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="/assets/favicon.ico" type="image/x-icon" />
     <title>Projects - Publication Assistant</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap"
+      rel="stylesheet"
+    />
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            fontFamily: { sans: ["Inter", "sans-serif"] },
+            colors: {
+              brand: {
+                navy: "#0f172a",
+                sidebar: "#0b1120",
+                card: "#1e293b",
+                surface: "#111827",
+                accent: "#6366f1",
+                border: "#334155",
+                muted: "#94a3b8",
+              },
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      html,
+      body {
+        height: 100%;
+        overflow: hidden;
+      }
+      body {
+        background: #08111f;
+        color: #f8fafc;
+        font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+      }
+      .page-shell {
+        position: relative;
+        height: 100vh;
+        overflow: hidden;
+        background: linear-gradient(
+          135deg,
+          #08111f 0%,
+          #0b132b 35%,
+          #111827 100%
+        );
+      }
+      #sidebar-root {
+        height: 100vh;
+        overflow: hidden;
+      }
+      #sidebar-root > * {
+        height: 100vh;
+      }
+      .glass-card {
+        background: rgba(15, 23, 42, 0.72);
+        border: 1px solid rgba(148, 163, 184, 0.14);
+        backdrop-filter: blur(18px);
+        box-shadow: 0 28px 80px -45px rgba(15, 23, 42, 0.85);
+      }
+      .soft-badge {
+        display: inline-flex;
+        align-items: center;
+        border-radius: 9999px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.06);
+        padding: 0.45rem 0.9rem;
+        font-size: 0.68rem;
+        font-weight: 700;
+        letter-spacing: 0.25em;
+        text-transform: uppercase;
+        color: #dbeafe;
+      }
+      .page-heading {
+        margin-top: 0.9rem;
+        font-size: clamp(2rem, 3vw, 2.8rem);
+        font-weight: 700;
+        letter-spacing: -0.055em;
+        color: #f8fafc;
+      }
+    </style>
   </head>
-  <body class="min-h-screen p-8 font-sans">
-    <div class="max-w-4xl mx-auto">
-      <div class="flex items-center justify-between mb-6">
-        <h1 class="text-2xl font-bold">Projects</h1>
-        <a href="index.html" class="px-3 py-2 bg-slate-800 rounded text-sm"
-          >Back</a
-        >
+  <body class="dark h-screen overflow-hidden">
+    <div class="page-shell h-screen overflow-hidden">
+      <div
+        class="absolute inset-0 bg-gradient-to-br from-[#08111F] via-[#0B132B] to-[#111827]"
+      ></div>
+      <div class="absolute inset-0 opacity-75">
+        <img
+          src="/assets/hero_bg.png"
+          alt="Background"
+          class="h-full w-full object-cover object-center"
+          loading="lazy"
+        />
       </div>
       <div
-        id="projects-list"
-        class="bg-slate-900 p-6 rounded text-sm text-slate-200"
+        class="absolute inset-0 bg-gradient-to-t from-slate-950/95 via-slate-950/45 to-transparent"
+      ></div>
+      <div
+        class="relative z-10 mx-auto flex h-screen max-w-[1600px] flex-col lg:grid lg:grid-cols-[320px_minmax(0,1fr)]"
       >
-        Loading projects...
+        <div id="sidebar-root"></div>
+        <main
+          class="flex h-screen flex-1 items-start justify-center overflow-y-auto px-4 py-6 sm:px-6 lg:px-8"
+        >
+          <div class="w-full max-w-5xl">
+            <div class="glass-card rounded-[28px] p-4 sm:p-6 lg:p-8">
+              <div class="mb-6 flex items-center justify-between gap-3">
+                <div>
+                  <div class="soft-badge">Projects</div>
+                  <h1 class="page-heading">Repository library</h1>
+                </div>
+                <a
+                  href="index.html"
+                  class="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-200 transition hover:bg-white/10"
+                  >Back</a
+                >
+              </div>
+              <div
+                id="projects-list"
+                class="rounded-3xl border border-white/10 bg-slate-950/60 p-4 text-sm text-slate-200"
+              >
+                Loading projects...
+              </div>
+            </div>
+          </div>
+        </main>
       </div>
     </div>
 
@@ -61,15 +178,38 @@
       }
       loadProjects();
     </script>
+    <script>
+      async function editProject(id) {
+        try {
+          const res = await fetch("/api/projects");
+          const j = await res.json();
+          const p = j[id] || {};
+          const newRepo = prompt(
+            "Edit repository URL for " + id,
+            p.repo_url || "",
+          );
+          if (newRepo === null) return; // cancelled
+          const title = prompt(
+            "Title/label (optional)",
+            (p.metadata && p.metadata.title) || "",
+          );
+          const metadata = { ...(p.metadata || {}) };
+          if (title !== null) metadata.title = title;
+          await fetch("/api/projects", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              project_id: id,
+              repo_url: newRepo,
+              metadata,
+            }),
+          });
+          loadProjects();
+        } catch (e) {
+          alert("Failed to edit project: " + e);
+        }
+      }
+    </script>
+    <script src="/static/sidebar-loader.js" defer></script>
   </body>
-  async function editProject(id){ try{ const res = await fetch('/api/projects');
-  const j = await res.json(); const p = j[id] || {}; const newRepo =
-  prompt('Edit repository URL for '+id, p.repo_url||''); if(newRepo===null)
-  return; // cancelled const title = prompt('Title/label (optional)',
-  (p.metadata && p.metadata.title) || ''); const metadata = {
-  ...(p.metadata||{}) }; if(title!==null) metadata.title = title; await
-  fetch('/api/projects', { method: 'POST', headers:
-  {'Content-Type':'application/json'}, body: JSON.stringify({ project_id: id,
-  repo_url: newRepo, metadata }) }); loadProjects(); }catch(e){ alert('Failed to
-  edit project: '+e); } }
 </html>

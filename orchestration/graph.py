@@ -3,6 +3,8 @@ from langgraph.graph import StateGraph, END  # type: ignore
 import logging
 from typing import Any, Dict
 
+from utils.publication_builder import PublicationBuilder
+
 logger = logging.getLogger(__name__)
 
 
@@ -10,6 +12,7 @@ class Orchestrator:
     def __init__(self, bus: Any = None):
         logger.info("Initializing Orchestrator with LangGraph")
         self.bus = bus
+        self.publication_builder = PublicationBuilder()
 
     def compile(self):
         return self
@@ -136,10 +139,21 @@ class Orchestrator:
             except Exception:
                 result = {}
 
+        repo_analysis = result.get("repo_analysis")
+        metadata = result.get("metadata")
+        publication_readme = self.publication_builder.build_readme(
+            repo_analysis=repo_analysis,
+            metadata=metadata,
+            repo_source=repo_source,
+            style=style,
+            goal=goal,
+        )
+
         return {
-            "analysis": result.get("repo_analysis"),
-            "metadata": result.get("metadata"),
+            "analysis": repo_analysis,
+            "metadata": metadata,
             "content_improvement": result.get("content_improvement"),
             "review": result.get("review"),
-            "fact_check": result.get("fact_check")
+            "fact_check": result.get("fact_check"),
+            "publication_readme": publication_readme,
         }

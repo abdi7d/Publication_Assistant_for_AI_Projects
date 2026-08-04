@@ -13,6 +13,7 @@ import os
 import logging
 from dotenv import load_dotenv
 from utils.logging import configure_logging
+from utils.publication_builder import PublicationBuilder
 
 load_dotenv()
 configure_logging()
@@ -52,14 +53,16 @@ def main():
     agents = build_agents(repo_path)
     orchestrator = Orchestrator()
     result = orchestrator.run_pipeline(agents=agents, repo_source=repo_path)
-    # Print a concise report
+    # Print a concise report plus the publication-ready README preview
     print("=== Publication Assistant Report ===")
     print("Suggested titles:", result["metadata"].title_suggestions)
     print("Suggested tags:", ", ".join(result["metadata"].tags[:20]))
     print("Review score:", result["review"].score)
     print("Missing README sections:", result["analysis"].missing_sections)
     print("Fact-check flagged items:", len(result["fact_check"].flagged))
+    print("\n=== Publication-Ready README Preview ===")
+    print(result.get("publication_readme", "")[:4000])
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     main()

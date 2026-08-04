@@ -268,13 +268,13 @@ pip install -r requirements.txt
 2. Start the server (serves `ui/index.html` and provides API endpoints):
 
 ```bash
-python app.py --serve-ui --host 0.0.0.0 --port 8000
+python app.py --serve-ui --host 0.0.0.0 --port 8001
 ```
 
 3. Open the dashboard in your browser:
 
 ```
-http://localhost:8000
+http://localhost:8001
 ```
 
 API endpoints exposed by the FastAPI backend (JSON):
@@ -285,13 +285,13 @@ API endpoints exposed by the FastAPI backend (JSON):
 Example curl for validation:
 
 ```bash
-curl -X POST http://localhost:8000/api/validate -H "Content-Type: application/json" -d '{"repo_url":"https://github.com/your/repo"}'
+curl -X POST http://localhost:8001/api/validate -H "Content-Type: application/json" -d '{"repo_url":"https://github.com/your/repo"}'
 ```
 
 Example curl to trigger generation:
 
 ```bash
-curl -X POST http://localhost:8000/api/generate -H "Content-Type: application/json" -d '{"repo_url":"https://github.com/your/repo","style":"Technical Blog","length":"Medium","model":"gemini-1.5-flash-latest","goal":"Write an article","project_id":"my-project"}'
+curl -X POST http://localhost:8001/api/generate -H "Content-Type: application/json" -d '{"repo_url":"https://github.com/your/repo","style":"Technical Blog","length":"Medium","model":"gemini-1.5-flash-latest","goal":"Write an article","project_id":"my-project"}'
 ```
 
 ---

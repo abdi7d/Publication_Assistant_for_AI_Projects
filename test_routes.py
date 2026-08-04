@@ -34,8 +34,8 @@ if __name__ == "__main__":
     paths = ["/", "/health", "/testpage", "/test.html"]
 
     print("Testing routes with FastAPI TestClient:")
-    print("=" * 70)
+    print("=" * 100)
     for path in paths:
         resp = client.get(path)
         print(f"{path:20} -> {resp.status_code}: {resp.json()}")
-    print("=" * 70)
+    print("=" * 100)

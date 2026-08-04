@@ -12,10 +12,10 @@ How to run locally:
 
 ```bash
 pip install -r requirements.txt
-python app.py --serve-ui --host 0.0.0.0 --port 8000
+python app.py --serve-ui --host 0.0.0.0 --port 8001
 ```
 
-Then open `http://localhost:8000` to use the static dashboard connected to the Python backend API.
+Then open `http://localhost:8001` to use the static dashboard connected to the Python backend API.
 
 Optional next steps:
 

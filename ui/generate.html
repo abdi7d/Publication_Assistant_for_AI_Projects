@@ -3,6 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="/assets/favicon.ico" type="image/x-icon" />
     <title>Generate Article - Publication Assistant</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <link
@@ -15,35 +16,862 @@
         theme: {
           extend: {
             fontFamily: { sans: ["Inter", "sans-serif"] },
-            colors: { brand: { border: "#334155" } },
+            colors: {
+              brand: {
+                navy: "#0f172a",
+                sidebar: "#0b1120",
+                card: "#1e293b",
+                surface: "#111827",
+                accent: "#6366f1",
+                border: "#334155",
+                muted: "#94a3b8",
+                purple: "#6366f1",
+              },
+            },
           },
         },
       };
     </script>
     <style>
+      :root {
+        color-scheme: dark;
+      }
+      html, body {
+        height: 100%;
+        overflow: hidden;
+      }
       body {
-        background-color: #0f172a;
-        color: #f1f5f9;
+        background: #08111f;
+        color: #f8fafc;
+        font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+      }
+      .page-shell {
+        position: relative;
+        height: 100vh;
+        overflow: hidden;
+        background: linear-gradient(135deg, #08111f 0%, #0b132b 35%, #111827 100%);
+      }
+      #sidebar-root {
+        height: 100vh;
+        overflow: hidden;
+      }
+      #sidebar-root > * {
+        height: 100vh;
+      }
+      .glass-card {
+        background: rgba(15, 23, 42, 0.72);
+        border: 1px solid rgba(148, 163, 184, 0.14);
+        backdrop-filter: blur(18px);
+        box-shadow: 0 28px 80px -45px rgba(15, 23, 42, 0.85);
+      }
+      .soft-badge {
+        display: inline-flex;
+        align-items: center;
+        border-radius: 9999px;
+        border: 1px solid rgba(255,255,255,0.12);
+        background: rgba(255,255,255,0.06);
+        padding: 0.45rem 0.9rem;
+        font-size: 0.68rem;
+        font-weight: 700;
+        letter-spacing: 0.25em;
+        text-transform: uppercase;
+        color: #dbeafe;
+      }
+      .page-heading {
+        margin-top: 0.9rem;
+        font-size: clamp(2rem, 3vw, 2.8rem);
+        font-weight: 700;
+        letter-spacing: -0.055em;
+        color: #f8fafc;
+      }
+      .page-card {
+        background: #1e293b;
+        border: 1px solid #334155;
+        border-radius: 1rem;
+      }
+      .page-panel {
+        background: #111827;
+        border: 1px solid #334155;
+        border-radius: 0.75rem;
+      }
+      .page-text {
+        color: #cbd5e1;
+      }
+      .page-muted {
+        color: #94a3b8;
+      }
+      .page-link {
+        color: #93c5fd;
+      }
+      .page-link:hover {
+        color: #f8fafc;
+      }
+      .markdown-body {
+        max-width: 100%;
+        margin: 0 auto;
+        color: #e2e8f0;
+        font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+        line-height: 1.75;
+      }
+
+      .markdown-body h1,
+      .markdown-body h2,
+      .markdown-body h3,
+      .markdown-body h4 {
+        margin-top: 1.75rem;
+        margin-bottom: 1rem;
+        line-height: 1.25;
+      }
+
+      .markdown-body h1 {
+        font-size: 2.25rem;
+        letter-spacing: -0.05em;
+      }
+
+      .markdown-body h2 {
+        font-size: 1.75rem;
+        border-bottom: 1px solid #334155;
+        padding-bottom: 0.35rem;
+      }
+
+      .markdown-body h3 {
+        font-size: 1.25rem;
+      }
+
+      .markdown-body p {
+        margin: 0.85rem 0;
+      }
+
+      .markdown-body blockquote {
+        margin: 1.25rem 0;
+        padding: 1rem 1.25rem;
+        border-left: 4px solid #38bdf8;
+        background: rgba(56, 189, 248, 0.08);
+        color: #cbd5e1;
+      }
+
+      .markdown-body table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 1rem 0;
+      }
+
+      .markdown-body table th,
+      .markdown-body table td {
+        border: 1px solid #334155;
+        padding: 0.85rem 1rem;
+      }
+
+      .markdown-body table tr:nth-child(even) {
+        background: rgba(148, 163, 184, 0.08);
+      }
+
+      .markdown-body ul,
+      .markdown-body ol {
+        margin: 1rem 0 1rem 1.25rem;
+        padding: 0;
+      }
+
+      .markdown-body li {
+        margin: 0.45rem 0;
+      }
+
+      .markdown-body a {
+        color: #7dd3fc;
+        text-decoration: underline;
+      }
+
+      .markdown-body strong {
+        color: #f8fafc;
+      }
+
+      .markdown-body em {
+        color: #cbd5e1;
+      }
+
+      .markdown-body hr {
+        border-color: #334155;
+        margin: 2rem 0;
+      }
+
+      .markdown-body pre {
+        background: #020617;
+        color: #e2e8f0;
+        border-radius: 1rem;
+        padding: 1rem;
+        overflow: auto;
+        box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.12);
+      }
+
+      .markdown-body code {
+        font-family:
+          ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+          "Liberation Mono", "Courier New", monospace;
+      }
+
+      .markdown-body td code,
+      .markdown-body th code {
+        display: inline-block;
+      }
+
+      .markdown-body .mermaid {
+        background: rgba(15, 23, 42, 0.95);
+        border: 1px solid #334155;
+        border-radius: 1rem;
+        padding: 1rem;
+        margin: 1rem 0;
+      }
+
+      .output-card {
+        border: 1px solid #334155;
+        border-radius: 1.25rem;
+        background: #111827;
+        padding: 1.5rem;
+        box-shadow: 0 18px 60px -40px rgba(15, 23, 42, 0.8);
+      }
+
+      .status-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.65rem 1rem;
+        border-radius: 9999px;
+        background: rgba(14, 165, 233, 0.12);
+        color: #7dd3fc;
+        font-size: 0.95rem;
+      }
+
+      .progress-card {
+        border: 1px solid rgba(148, 163, 184, 0.12);
+        border-radius: 1.5rem;
+        background: rgba(15, 23, 42, 0.95);
+        padding: 1.5rem;
+        box-shadow: 0 24px 68px -44px rgba(15, 23, 42, 0.8);
+      }
+
+      .progress-banner {
+        border-radius: 1rem;
+        padding: 1rem 1.1rem;
+        font-size: 0.95rem;
+      }
+
+      .progress-banner.success {
+        background: rgba(52, 211, 153, 0.12);
+        color: #a7f3d0;
+        border: 1px solid rgba(52, 211, 153, 0.24);
+      }
+
+      .progress-banner.error {
+        background: rgba(248, 113, 113, 0.12);
+        color: #fecaca;
+        border: 1px solid rgba(248, 113, 113, 0.24);
+      }
+
+      .progress-bar {
+        border-radius: 9999px;
+        background: rgba(148, 163, 184, 0.12);
+        overflow: hidden;
+        height: 0.75rem;
+      }
+
+      .progress-fill {
+        height: 100%;
+        width: 0;
+        background: linear-gradient(90deg, #22d3ee, #60a5fa, #818cf8);
+        transition: width 0.3s ease;
+      }
+
+      .progress-step {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        align-items: flex-start;
+        gap: 0.75rem;
+        padding: 0.95rem 0;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.08);
+      }
+
+      .progress-step:last-child {
+        border-bottom: none;
+      }
+
+      .progress-step.active {
+        opacity: 1;
+      }
+
+      .progress-step.pending {
+        opacity: 0.7;
+      }
+
+      .step-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2.25rem;
+        height: 2.25rem;
+        border-radius: 9999px;
+        background: rgba(71, 85, 105, 0.14);
+        color: #7dd3fc;
+        font-size: 0.95rem;
+        flex-shrink: 0;
+      }
+
+      .progress-step.active .step-icon {
+        background: rgba(56, 189, 248, 0.18);
+        animation: pulse 1.4s ease-in-out infinite;
+      }
+
+      .progress-step.completed .step-icon {
+        background: rgba(52, 211, 153, 0.18);
+        color: #a7f3d0;
+      }
+
+      .spinner {
+        width: 1rem;
+        height: 1rem;
+        border: 2px solid rgba(148, 163, 184, 0.35);
+        border-top-color: #38bdf8;
+        border-radius: 9999px;
+        animation: spin 0.8s linear infinite;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+
+        100% {
+          transform: rotate(360deg);
+        }
       }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
   </head>
-  <body class="font-sans antialiased min-h-screen p-8">
-    <div class="max-w-5xl mx-auto">
-      <div class="flex items-center justify-between mb-6">
-        <h1 class="text-2xl font-bold">Generate Article</h1>
-        <div class="flex gap-2">
-          <a href="index.html" class="px-3 py-2 bg-slate-800 rounded text-sm"
-            >Back</a
-          >
+  <body class="dark h-screen overflow-hidden">
+    <div class="page-shell h-screen overflow-hidden">
+      <div class="absolute inset-0 bg-gradient-to-br from-[#08111F] via-[#0B132B] to-[#111827]"></div>
+      <div class="absolute inset-0 opacity-75">
+        <img src="/assets/hero_bg.png" alt="Background" class="h-full w-full object-cover object-center" loading="lazy" />
+      </div>
+      <div class="absolute inset-0 bg-gradient-to-t from-slate-950/95 via-slate-950/45 to-transparent"></div>
+      <div class="relative z-10 mx-auto flex h-screen max-w-[1600px] flex-col lg:grid lg:grid-cols-[320px_minmax(0,1fr)]">
+        <div id="sidebar-root"></div>
+        <main class="flex h-screen flex-1 items-start justify-center overflow-y-auto px-4 py-6 sm:px-6 lg:px-8">
+          <div class="w-full max-w-6xl">
+            <div class="glass-card rounded-[28px] p-4 sm:p-6 lg:p-8">
+              <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
+                <div>
+                  <div class="soft-badge">Generate</div>
+                  <h1 class="page-heading">Generate Article</h1>
+                  <p class="mt-2 max-w-2xl text-sm text-slate-400">
+                    Create a publication-ready technical report with premium output
+                    styling, structured sections, smart diagrams, and polished
+                    readability.
+                  </p>
+                </div>
+                <div class="flex items-center gap-2">
+                  <a
+                    href="index.html"
+                    class="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-200 transition hover:bg-white/10"
+                    >Back</a
+                  >
+                </div>
+              </div>
+
+      <!-- BEGIN: Project Setup Section -->
+      <section class="mb-8" data-purpose="project-setup">
+        <div class="bg-brand-card/40 border border-brand-border rounded-xl p-6">
+          <div class="flex items-center gap-3 mb-6">
+            <div class="p-2 bg-indigo-500/20 text-indigo-400 rounded">
+              <svg
+                class="h-5 w-5"
+                fill="none"
+                stroke="currentColor"
+                viewbox="0 0 24 24"
+              >
+                <path
+                  d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2z"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                ></path>
+              </svg>
+            </div>
+            <div>
+              <h3 class="font-bold">Project Setup</h3>
+              <p class="text-xs text-slate-400">
+                Provide your repository details and preferences
+              </p>
+            </div>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="md:col-span-1">
+              <label
+                class="flex items-center gap-2 text-xs font-semibold text-slate-300 mb-2"
+              >
+                <svg
+                  class="h-3.5 w-3.5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewbox="0 0 24 24"
+                >
+                  <path
+                    d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                  ></path>
+                </svg>
+                Repository URL
+              </label>
+              <input
+                id="repo-url"
+                class="w-full bg-slate-900 border-brand-border rounded-lg text-sm p-3 focus:ring-indigo-500 focus:border-indigo-500"
+                placeholder="https://github.com/username/repo"
+                type="text"
+              />
+              <p class="mt-1.5 text-[10px] text-slate-500 italic">
+                Enter GitHub repository URL
+              </p>
+            </div>
+            <div class="md:col-span-1">
+              <label
+                class="flex items-center gap-2 text-xs font-semibold text-slate-300 mb-2"
+              >
+                <svg
+                  class="h-3.5 w-3.5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewbox="0 0 24 24"
+                >
+                  <path
+                    d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2z"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                  ></path>
+                </svg>
+                Project Mode
+              </label>
+              <select
+                id="cfg-project-mode"
+                class="w-full bg-slate-900 border-brand-border rounded-lg text-sm p-3 focus:ring-indigo-500 focus:border-indigo-500 appearance-none"
+              >
+                <option>Create New Project</option>
+                <option>Update Existing</option>
+              </select>
+              <p class="mt-1.5 text-[10px] text-slate-500 italic">
+                Choose to create a new project or select existing
+              </p>
+            </div>
+            <div class="md:col-span-1">
+              <label
+                class="flex items-center gap-2 text-xs font-semibold text-slate-300 mb-2"
+                >Project Description (optional)</label
+              >
+              <input
+                id="cfg-project-desc"
+                class="w-full bg-slate-900 border-brand-border rounded-lg text-sm p-3 focus:ring-indigo-500 focus:border-indigo-500"
+                placeholder="Short project description"
+                type="text"
+              />
+              <p class="mt-1.5 text-[10px] text-slate-500 italic">
+                Saved to configuration
+              </p>
+            </div>
+            <div class="md:col-span-1">
+              <label
+                class="flex items-center gap-2 text-xs font-semibold text-slate-300 mb-2"
+              >
+                <svg
+                  class="h-3.5 w-3.5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewbox="0 0 24 24"
+                >
+                  <path
+                    d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2z"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                  ></path>
+                </svg>
+                Select Existing Project (optional)
+              </label>
+              <select
+                id="cfg-existing-project"
+                class="w-full bg-slate-900 border-brand-border rounded-lg text-sm p-3 focus:ring-indigo-500 focus:border-indigo-500 appearance-none"
+              >
+                <option>Select a project...</option>
+              </select>
+              <p class="mt-1.5 text-[10px] text-slate-500 italic">
+                Choose from your existing projects
+              </p>
+            </div>
+          </div>
         </div>
-        <div class="flex gap-2">
-          <a href="index.html" class="px-3 py-2 bg-slate-800 rounded text-sm"
-            >Back</a
+      </section>
+      <!-- END: Project Setup Section -->
+
+      <!-- BEGIN: Grid Layout for Config & Preview -->
+      <div
+        class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8"
+        data-purpose="config-row"
+      >
+        <div
+          class="bg-brand-card/40 border border-brand-border rounded-xl p-6"
+          data-purpose="configuration-card"
+        >
+          <div class="flex items-center gap-3 mb-6">
+            <div class="p-2 bg-indigo-500/20 text-indigo-400 rounded">
+              <svg
+                class="h-5 w-5"
+                fill="none"
+                stroke="currentColor"
+                viewbox="0 0 24 24"
+              >
+                <path
+                  d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                ></path>
+              </svg>
+            </div>
+            <h3 class="font-bold">Configuration</h3>
+          </div>
+          <div class="space-y-6">
+            <div>
+              <label
+                class="flex items-center gap-2 text-xs font-semibold text-slate-300 mb-2"
+              >
+                <svg
+                  class="h-3.5 w-3.5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewbox="0 0 24 24"
+                >
+                  <path
+                    d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                  ></path>
+                </svg>
+                Writing Style
+              </label>
+              <select
+                id="cfg-style"
+                class="w-full bg-slate-900 border-brand-border rounded-lg text-sm p-3 focus:ring-indigo-500 focus:border-indigo-500"
+              >
+                <option>Technical Blog</option>
+                <option>Research Paper</option>
+                <option>User Documentation</option>
+              </select>
+              <p class="mt-1.5 text-[10px] text-slate-500">
+                Choose the preferred writing style
+              </p>
+            </div>
+            <div>
+              <label
+                class="flex items-center gap-2 text-xs font-semibold text-slate-300 mb-2"
+              >
+                <svg
+                  class="h-3.5 w-3.5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewbox="0 0 24 24"
+                >
+                  <path
+                    d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                  ></path>
+                </svg>
+                Target Length
+              </label>
+              <select
+                id="cfg-length"
+                class="w-full bg-slate-900 border-brand-border rounded-lg text-sm p-3 focus:ring-indigo-500 focus:border-indigo-500"
+              >
+                <option>Short</option>
+                <option selected>Medium</option>
+                <option>Long</option>
+              </select>
+              <p class="mt-1.5 text-[10px] text-slate-500">
+                Select the desired article length
+              </p>
+            </div>
+            <div>
+              <label
+                class="flex items-center gap-2 text-xs font-semibold text-slate-300 mb-2"
+              >
+                <svg
+                  class="h-3.5 w-3.5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewbox="0 0 24 24"
+                >
+                  <path
+                    d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                  ></path>
+                </svg>
+                AI Model
+              </label>
+              <select
+                id="cfg-model"
+                class="w-full bg-slate-900 border-brand-border rounded-lg text-sm p-3 focus:ring-indigo-500 focus:border-indigo-500"
+              >
+                <option>Gemini Flash Latest (Google)</option>
+                <option>Gemini  Pro (Google)</option>
+                <option>Groq nstant (Groq)</option>
+                <option>Groq 68 (Groq)</option>
+                <option>Heuristic Fallback (No LLM)</option>
+              </select>
+              <p class="mt-1.5 text-[10px] text-slate-500">
+                Choose the AI model for generation
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div
+          class="bg-brand-card/40 border border-brand-border rounded-xl p-6"
+          data-purpose="docs-card"
+        >
+          <div class="flex items-center gap-3 mb-6">
+            <div class="p-2 bg-indigo-500/20 text-indigo-400 rounded">
+              <svg
+                class="h-5 w-5"
+                fill="none"
+                stroke="currentColor"
+                viewbox="0 0 24 24"
+              >
+                <path
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                ></path>
+              </svg>
+            </div>
+            <h3 class="font-bold">
+              Supplemental Documents
+              <span class="text-xs font-normal text-slate-400">(optional)</span>
+            </h3>
+          </div>
+          <p class="text-xs text-slate-400 mb-6">
+            Upload PDFs or docs to provide additional context for better
+            results.
+          </p>
+          <div
+            class="h-64 border-2 border-dashed border-indigo-500/30 rounded-xl flex flex-col items-center justify-center p-6 bg-indigo-500/5 group hover:border-indigo-500/60 transition-all"
           >
+            <div
+              class="w-16 h-16 bg-indigo-500/10 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform"
+            >
+              <svg
+                class="h-8 w-8 text-indigo-400"
+                fill="none"
+                stroke="currentColor"
+                viewbox="0 0 24 24"
+              >
+                <path
+                  d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                ></path>
+              </svg>
+            </div>
+            <p class="text-sm font-medium">Drag &amp; drop files here</p>
+            <p class="text-xs text-indigo-400 font-semibold mt-1">
+              or click to browse
+            </p>
+            <p class="text-[10px] text-slate-500 mt-4">
+              Supports PDF, DOCX, TXT (Max 20MB each)
+            </p>
+            <button
+              id="browse-files-btn"
+              class="mt-6 px-6 py-2 bg-brand-navy border border-brand-border rounded-lg text-sm font-medium hover:bg-slate-800"
+            >
+              Browse Files
+            </button>
+          </div>
+          <div class="mt-6">
+            <input
+              id="cfg-files"
+              type="file"
+              multiple
+              class="text-sm w-full text-slate-200"
+            />
+            <button
+              id="cfg-upload-btn"
+              class="ml-3 px-4 py-2 bg-indigo-600 rounded text-sm"
+            >
+              Upload
+            </button>
+          </div>
+          <div class="mt-6 flex items-center gap-2 text-slate-500 text-xs">
+            <svg
+              class="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              viewbox="0 0 24 24"
+            >
+              <path
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+              ></path>
+            </svg>
+            No files uploaded
+          </div>
+        </div>
+
+        <div
+          class="bg-brand-card/40 border border-brand-border rounded-xl p-6"
+          data-purpose="preview-card"
+        >
+          <div class="flex items-center gap-3 mb-6">
+            <div class="p-2 bg-indigo-500/20 text-indigo-400 rounded">
+              <svg
+                class="h-5 w-5"
+                fill="none"
+                stroke="currentColor"
+                viewbox="0 0 24 24"
+              >
+                <path
+                  d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                ></path>
+              </svg>
+            </div>
+            <h3 class="font-bold">Repository Preview</h3>
+          </div>
+          <div
+            class="bg-slate-900/50 border border-brand-border rounded-xl p-8 flex flex-col items-center justify-center text-center"
+          >
+            <div class="mb-4 text-slate-500">
+              <svg class="h-10 w-10" fill="currentColor" viewbox="0 0 24 24">
+                <path
+                  d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.041-1.416-4.041-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"
+                ></path>
+              </svg>
+            </div>
+            <p class="text-xs text-slate-300 font-medium mb-1">
+              Enter a valid GitHub repository
+            </p>
+            <p class="text-[10px] text-slate-500 mb-6">
+              URL and click <span class="font-bold">Validate</span>
+            </p>
+            <div class="w-full space-y-2 text-left mb-8">
+              <div class="flex items-center gap-3 text-[11px] text-slate-400">
+                <svg
+                  class="h-3.5 w-3.5 text-green-500"
+                  fill="currentColor"
+                  viewbox="0 0 20 20"
+                >
+                  <path
+                    clip-rule="evenodd"
+                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                    fill-rule="evenodd"
+                  ></path>
+                </svg>
+                Repository structure
+              </div>
+              <div class="flex items-center gap-3 text-[11px] text-slate-400">
+                <svg
+                  class="h-3.5 w-3.5 text-green-500"
+                  fill="currentColor"
+                  viewbox="0 0 20 20"
+                >
+                  <path
+                    clip-rule="evenodd"
+                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                    fill-rule="evenodd"
+                  ></path>
+                </svg>
+                README content
+              </div>
+              <div class="flex items-center gap-3 text-[11px] text-slate-400">
+                <svg
+                  class="h-3.5 w-3.5 text-green-500"
+                  fill="currentColor"
+                  viewbox="0 0 20 20"
+                >
+                  <path
+                    clip-rule="evenodd"
+                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                    fill-rule="evenodd"
+                  ></path>
+                </svg>
+                Key files &amp; metadata
+              </div>
+              <div class="flex items-center gap-3 text-[11px] text-slate-400">
+                <svg
+                  class="h-3.5 w-3.5 text-green-500"
+                  fill="currentColor"
+                  viewbox="0 0 20 20"
+                >
+                  <path
+                    clip-rule="evenodd"
+                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                    fill-rule="evenodd"
+                  ></path>
+                </svg>
+                Project insights
+              </div>
+            </div>
+            <button
+              id="validate-btn"
+              class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg flex items-center justify-center gap-2 transition-all shadow-lg shadow-indigo-500/20"
+            >
+              <svg
+                class="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                viewbox="0 0 24 24"
+              >
+                <path
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                ></path>
+              </svg>
+              Validate Repository
+            </button>
+            <div
+              id="validate-result"
+              class="w-full mt-4 text-sm text-slate-300 hidden"
+            >
+              <div id="validate-msg" class="font-medium mb-2"></div>
+              <pre
+                id="repo-tree"
+                class="whitespace-pre-wrap text-xs text-slate-400 bg-slate-900 p-3 rounded-md"
+              ></pre>
+            </div>
+          </div>
         </div>
       </div>
+      <!-- END: Grid Layout -->
 
-      <div class="bg-slate-900 p-6 rounded-lg border border-brand-border">
+      <div
+        class="bg-slate-900 p-6 rounded-3xl border border-brand-border shadow-xl shadow-slate-950/30"
+      >
         <div class="grid grid-cols-1 gap-4">
           <div>
             <label class="text-xs text-slate-300">Generation Goal</label>
@@ -66,26 +894,53 @@
           </div>
         </div>
 
-        <div class="mt-6 flex items-center gap-4">
-          <button
-            id="gen-btn"
-            class="px-6 py-3 bg-indigo-600 rounded font-semibold"
-          >
-            Generate
-          </button>
-          <div id="gen-status" class="text-sm text-slate-400"></div>
-          <div id="gen-actions" class="ml-3 flex items-center gap-2"></div>
+        <div class="mt-6 flex flex-col gap-4">
+          <div class="flex flex-wrap items-center gap-4">
+            <button
+              id="gen-btn"
+              class="px-6 py-3 bg-indigo-600 rounded font-semibold"
+            >
+              Generate
+            </button>
+            <div id="gen-status" class="text-sm text-slate-400"></div>
+            <div id="gen-actions" class="ml-auto flex items-center gap-2"></div>
+          </div>
+
+          <div id="gen-progress-card" class="progress-card hidden">
+            <div id="gen-banner" class="progress-banner"></div>
+            <div class="mt-4">
+              <div class="flex items-center justify-between gap-4">
+                <div>
+                  <div class="text-slate-300 text-sm">Current stage</div>
+                  <div id="gen-stage" class="text-white font-semibold mt-1">
+                    Waiting to start
+                  </div>
+                </div>
+                <div class="text-slate-400 text-sm text-right">
+                  <div id="gen-percent">0%</div>
+                  <div id="gen-timer" class="mt-1">00:00 elapsed</div>
+                </div>
+              </div>
+              <div class="progress-bar mt-4">
+                <div id="gen-progress-fill" class="progress-fill"></div>
+              </div>
+            </div>
+            <div id="gen-step-list" class="mt-4"></div>
+            <div class="progress-actions mt-4 flex items-center gap-3"></div>
+          </div>
         </div>
       </div>
 
       <div id="gen-output" class="mt-6 hidden">
-        <div class="bg-slate-900 p-6 rounded border border-brand-border">
-          <h2 id="out-title" class="text-xl font-bold mb-2"></h2>
-          <div id="out-tags" class="mb-4"></div>
-          <div
-            id="out-body"
-            class="prose max-w-none whitespace-pre-wrap text-slate-200"
-          ></div>
+        <div class="result-card border border-brand-border">
+          <div class="result-header mb-6">
+            <div>
+              <h2 id="out-title" class="text-3xl font-bold"></h2>
+              <p id="out-subtitle" class="text-slate-400 mt-2"></p>
+            </div>
+            <div id="out-tags" class="flex flex-wrap gap-2"></div>
+          </div>
+          <div id="out-body" class="markdown-body text-slate-200"></div>
         </div>
       </div>
     </div>
@@ -107,18 +962,197 @@
             return {};
           }
         }
-        const cfg = loadConfig();
-        // show summary
-        (function showSummary() {
+        function saveConfig(cfg) {
+          localStorage.setItem(CFG_KEY, JSON.stringify(cfg));
+        }
+
+        function populateConfigInputs() {
+          const cfg = loadConfig();
+          const repoEl = document.getElementById("repo-url");
+          const styleEl = document.getElementById("cfg-style");
+          const lengthEl = document.getElementById("cfg-length");
+          const modelEl = document.getElementById("cfg-model");
+          const descEl = document.getElementById("cfg-project-desc");
+          const modeEl = document.getElementById("cfg-project-mode");
+          const projectEl = document.getElementById("cfg-existing-project");
+
+          if (repoEl && cfg.repo_url) repoEl.value = cfg.repo_url;
+          if (styleEl && cfg.style) styleEl.value = cfg.style;
+          if (lengthEl && cfg.length) lengthEl.value = cfg.length;
+          if (modelEl && cfg.model) modelEl.value = cfg.model;
+          if (descEl && cfg.project_desc) descEl.value = cfg.project_desc;
+          if (modeEl && cfg.project_mode) modeEl.value = cfg.project_mode;
+          if (projectEl && cfg.project_id) projectEl.value = cfg.project_id;
+        }
+
+        function updateSummary() {
           const s = document.getElementById("cfg-summary");
           if (!s) return;
+          const cfg = loadConfig();
           const repo = cfg.repo_url || "Not set";
           const style = cfg.style || "Technical Blog";
           const length = cfg.length || "Medium";
           const model = cfg.model || "Gemini 1.5 Flash Latest (Google)";
+          const mode = cfg.project_mode || "Create New Project";
+          const desc = cfg.project_desc || "Not set";
           const uploads = (cfg.uploads || []).length;
-          s.innerHTML = `<div class="font-semibold">Repository:</div><div class="text-xs text-slate-400 mb-2">${repo}</div><div class=\"font-semibold\">Style</div><div class=\"text-xs text-slate-400\">${style} • ${length} • ${model}</div><div class=\"text-xs text-slate-400 mt-2\">Uploaded files: ${uploads}</div>`;
-        })();
+          s.innerHTML = `
+            <div class="font-semibold">Repository:</div>
+            <div class="text-xs text-slate-400 mb-2">${repo}</div>
+            <div class="font-semibold">Style</div>
+            <div class="text-xs text-slate-400">${style} • ${length} • ${model}</div>
+            <div class="font-semibold mt-4">Project Mode</div>
+            <div class="text-xs text-slate-400">${mode}</div>
+            <div class="font-semibold mt-4">Description</div>
+            <div class="text-xs text-slate-400">${desc}</div>
+            <div class="font-semibold mt-4">Uploaded files</div>
+            <div class="text-xs text-slate-400">${uploads}</div>
+          `;
+        }
+
+        function onConfigChange() {
+          const cfg = loadConfig();
+          cfg.repo_url = (
+            document.getElementById("repo-url") || { value: "" }
+          ).value;
+          cfg.style = (
+            document.getElementById("cfg-style") || { value: "" }
+          ).value;
+          cfg.length = (
+            document.getElementById("cfg-length") || { value: "" }
+          ).value;
+          cfg.model = (
+            document.getElementById("cfg-model") || { value: "" }
+          ).value;
+          cfg.project_desc = (
+            document.getElementById("cfg-project-desc") || { value: "" }
+          ).value;
+          cfg.project_mode = (
+            document.getElementById("cfg-project-mode") || { value: "" }
+          ).value;
+          cfg.project_id = (
+            document.getElementById("cfg-existing-project") || { value: "" }
+          ).value;
+          saveConfig(cfg);
+          updateSummary();
+        }
+
+        populateConfigInputs();
+        updateSummary();
+
+        const validateBtn = document.getElementById("validate-btn");
+        const repoInput = document.getElementById("repo-url");
+        const resultBox = document.getElementById("validate-result");
+        const msgEl = document.getElementById("validate-msg");
+        const treeEl = document.getElementById("repo-tree");
+        const uploadBtn = document.getElementById("cfg-upload-btn");
+        const filesEl = document.getElementById("cfg-files");
+        const browseBtn = document.getElementById("browse-files-btn");
+        const projectModeEl = document.getElementById("cfg-project-mode");
+        const existingProjectEl = document.getElementById(
+          "cfg-existing-project",
+        );
+
+        [
+          "repo-url",
+          "cfg-style",
+          "cfg-length",
+          "cfg-model",
+          "cfg-project-desc",
+          "cfg-project-mode",
+          "cfg-existing-project",
+        ].forEach((id) => {
+          const el = document.getElementById(id);
+          if (!el) return;
+          el.addEventListener("change", onConfigChange);
+        });
+
+        async function loadProjectOptions() {
+          try {
+            const res = await fetch("/api/projects");
+            if (!res.ok) return;
+            const projects = await res.json();
+            if (!existingProjectEl) return;
+            existingProjectEl.innerHTML = `<option value="">Select a project...</option>`;
+            if (projects && typeof projects === "object") {
+              Object.keys(projects).forEach((projectId) => {
+                const option = document.createElement("option");
+                option.value = projectId;
+                option.textContent = projectId;
+                existingProjectEl.appendChild(option);
+              });
+              const cfg = loadConfig();
+              if (cfg.project_id) existingProjectEl.value = cfg.project_id;
+            }
+          } catch (e) {
+            console.warn("Unable to load projects", e);
+          }
+        }
+
+        if (validateBtn) {
+          validateBtn.addEventListener("click", async () => {
+            if (!repoInput || !repoInput.value.trim()) {
+              alert("Repository URL is required for validation.");
+              return;
+            }
+            try {
+              const res = await fetch("/api/validate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ repo_url: repoInput.value.trim() }),
+              });
+              const data = await res.json();
+              if (res.ok) {
+                if (resultBox) resultBox.classList.remove("hidden");
+                if (msgEl)
+                  msgEl.textContent = data.message || "Repository validated.";
+                if (treeEl) treeEl.textContent = data.tree || "";
+              } else {
+                alert(data.error || "Validation failed.");
+              }
+            } catch (err) {
+              console.warn(err);
+              alert("Repository validation failed.");
+            }
+          });
+        }
+
+        if (uploadBtn && filesEl) {
+          uploadBtn.addEventListener("click", async () => {
+            if (!filesEl.files.length) {
+              alert("Select files first");
+              return;
+            }
+            const fd = new FormData();
+            for (const file of filesEl.files) {
+              fd.append("files", file);
+            }
+            try {
+              const res = await fetch("/api/upload", {
+                method: "POST",
+                body: fd,
+              });
+              if (!res.ok) throw new Error("upload failed");
+              const j = await res.json();
+              const cfg = loadConfig();
+              cfg.uploads = (cfg.uploads || []).concat(j.saved || []);
+              saveConfig(cfg);
+              updateSummary();
+              showToast("Uploaded " + (j.saved || []).length + " files");
+            } catch (e) {
+              console.warn(e);
+              alert("Upload failed: " + e);
+            }
+          });
+        }
+
+        if (browseBtn && filesEl) {
+          browseBtn.addEventListener("click", () => {
+            filesEl.click();
+          });
+        }
+
+        loadProjectOptions();
 
         // Add UI toggle button (open Gradio or return to web)
         (function addUiToggle() {
@@ -155,6 +1189,18 @@
         const outTags = document.getElementById("out-tags");
         const outBody = document.getElementById("out-body");
         const actionsContainer = document.getElementById("gen-actions");
+        const progressCard = document.getElementById("gen-progress-card");
+        const progressBanner = document.getElementById("gen-banner");
+        const progressStage = document.getElementById("gen-stage");
+        const progressPercent = document.getElementById("gen-percent");
+        const progressTimer = document.getElementById("gen-timer");
+        const progressFill = document.getElementById("gen-progress-fill");
+        const progressSteps = document.getElementById("gen-step-list");
+        const progressActions = document.querySelector(".progress-actions");
+        let progressPoll = null;
+        let activeJobId = null;
+        let jobStartTime = null;
+
         // Toast helper
         function showToast(msg, timeout = 3000) {
           let t = document.getElementById("toast");
@@ -171,104 +1217,381 @@
           t._hideTimeout = setTimeout(() => t.classList.add("hidden"), timeout);
         }
 
+        function formatDuration(seconds) {
+          const mins = Math.floor(seconds / 60);
+          const secs = Math.floor(seconds % 60);
+          return `${mins.toString().padStart(2, "0")}:${secs
+            .toString()
+            .padStart(2, "0")}`;
+        }
+
+        function renderMarkdown(content) {
+          marked.setOptions({
+            headerIds: true,
+            mangle: false,
+            highlight: function (code, lang) {
+              if (lang && hljs.getLanguage(lang)) {
+                return hljs.highlight(code, { language: lang }).value;
+              }
+              return hljs.highlightAuto(code).value;
+            },
+          });
+
+          outBody.innerHTML = marked.parse(content || "");
+          document.querySelectorAll("#out-body pre code").forEach((block) => {
+            hljs.highlightElement(block);
+          });
+
+          document
+            .querySelectorAll(
+              "#out-body .language-mermaid, #out-body code.language-mermaid",
+            )
+            .forEach((el) => {
+              const parent = el.closest("pre") || el.parentElement;
+              const diagram = document.createElement("div");
+              diagram.className = "mermaid";
+              diagram.textContent = el.textContent;
+              if (parent) {
+                parent.replaceWith(diagram);
+              }
+            });
+
+          if (window.mermaid) {
+            mermaid.initialize({
+              startOnLoad: false,
+              securityLevel: "loose",
+              theme: "dark",
+            });
+            mermaid.run();
+          }
+        }
+
+        function resetProgressUI() {
+          if (progressPoll) {
+            clearInterval(progressPoll);
+            progressPoll = null;
+          }
+          activeJobId = null;
+          jobStartTime = null;
+          progressCard.classList.add("hidden");
+          progressBanner.className = "progress-banner";
+          progressBanner.textContent = "";
+          progressStage.textContent = "Waiting to start";
+          progressPercent.textContent = "0%";
+          progressTimer.textContent = "00:00 elapsed";
+          progressFill.style.width = "0%";
+          progressSteps.innerHTML = "";
+          progressActions.innerHTML = "";
+          genBtn.disabled = false;
+        }
+
+        function updateProgressBanner(type, message) {
+          progressBanner.className = `progress-banner ${type}`.trim();
+          progressBanner.textContent = message;
+        }
+
+        function renderStepList(steps) {
+          progressSteps.innerHTML = "";
+          steps.forEach((step, index) => {
+            const row = document.createElement("div");
+            const status = step.status || "PENDING";
+            const stateClass =
+              status === "COMPLETE"
+                ? "completed"
+                : status === "IN_PROGRESS"
+                  ? "active"
+                  : status === "FAILED"
+                    ? "failed"
+                    : "pending";
+            row.className = `progress-step ${stateClass}`;
+
+            const icon = document.createElement("div");
+            icon.className = "step-icon";
+            if (status === "COMPLETE") {
+              icon.textContent = "✓";
+            } else if (status === "IN_PROGRESS") {
+              icon.innerHTML = '<span class="spinner"></span>';
+            } else if (status === "FAILED") {
+              icon.textContent = "✕";
+            } else {
+              icon.textContent = index + 1;
+            }
+
+            const detail = document.createElement("div");
+            const label = document.createElement("div");
+            label.className = "step-label";
+            label.textContent = step.name.replace(/_/g, " ");
+            const desc = document.createElement("div");
+            desc.className = "step-detail";
+            desc.textContent =
+              step.detail || (status === "COMPLETE" ? "Complete" : "Pending");
+            detail.appendChild(label);
+            detail.appendChild(desc);
+
+            row.appendChild(icon);
+            row.appendChild(detail);
+            progressSteps.appendChild(row);
+          });
+        }
+
+        function updateProgressStatus(payload) {
+          const progress = Math.min(100, Math.max(0, payload.percent || 0));
+          const activeStep =
+            payload.steps?.find((s) => s.status === "IN_PROGRESS") ||
+            payload.steps?.find((s) => s.status === "PENDING") ||
+            payload.steps?.slice(-1)[0];
+          const stageName = activeStep?.name
+            ? activeStep.name.replace(/_/g, " ")
+            : payload.state;
+          progressStage.textContent = stageName;
+          progressPercent.textContent = `${progress}%`;
+          progressFill.style.width = `${progress}%`;
+          const elapsedSeconds = payload.start_ts
+            ? (payload.end_ts || Date.now() / 1000) - payload.start_ts
+            : (Date.now() - jobStartTime) / 1000;
+          progressTimer.textContent = `${formatDuration(elapsedSeconds)} elapsed`;
+          renderStepList(payload.steps || []);
+
+          if (payload.state === "RUNNING") {
+            updateProgressBanner(
+              "",
+              "Generation in progress — stay on this page.",
+            );
+            status.textContent = "Generating article...";
+            status.className = "status-chip";
+          } else if (payload.state === "SUCCESS") {
+            updateProgressBanner(
+              "success",
+              "Generation complete. Fetching final result...",
+            );
+            status.textContent = "Generation completed successfully.";
+            status.className = "status-chip";
+          } else if (payload.state === "ERROR") {
+            updateProgressBanner(
+              "error",
+              payload.error || "Generation failed.",
+            );
+            status.textContent = "Generation failed.";
+            status.className = "text-sm text-red-300";
+          } else if (payload.state === "CANCELLED") {
+            updateProgressBanner("error", "Generation canceled.");
+            status.textContent = "Generation canceled.";
+            status.className = "text-sm text-slate-400";
+          }
+        }
+
+        function addCancelButton() {
+          progressActions.innerHTML = "";
+          const cancelBtn = document.createElement("button");
+          cancelBtn.className =
+            "px-4 py-2 bg-rose-600 rounded text-sm text-white hover:bg-rose-500";
+          cancelBtn.textContent = "Cancel";
+          cancelBtn.addEventListener("click", async () => {
+            if (!activeJobId) return;
+            cancelBtn.disabled = true;
+            cancelBtn.textContent = "Canceling...";
+            try {
+              await fetch("/api/generate_cancel", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ job_id: activeJobId }),
+              });
+              updateProgressBanner(
+                "error",
+                "Cancellation requested. Waiting for stop.",
+              );
+              showToast("Cancellation requested");
+            } catch (err) {
+              showToast("Unable to cancel job.");
+            }
+          });
+          progressActions.appendChild(cancelBtn);
+        }
+
+        async function fetchResult(jobId) {
+          try {
+            const res = await fetch(`/api/generate_result?job_id=${jobId}`);
+            if (res.status === 202) {
+              return null;
+            }
+            if (!res.ok) {
+              const errorText = await res.text();
+              throw new Error(errorText || "Unable to fetch result");
+            }
+            return await res.json();
+          } catch (err) {
+            console.warn("Fetch result failed", err);
+            return null;
+          }
+        }
+
+        async function pollProgress(jobId) {
+          try {
+            const res = await fetch(`/api/generate_status?job_id=${jobId}`);
+            if (!res.ok) {
+              const body = await res.text();
+              throw new Error(body || "Status request failed");
+            }
+            const payload = await res.json();
+            updateProgressStatus(payload);
+
+            if (payload.state === "SUCCESS") {
+              const result = await fetchResult(jobId);
+              if (result) {
+                if (progressPoll) {
+                  clearInterval(progressPoll);
+                  progressPoll = null;
+                }
+                displayResult(result);
+              } else {
+                updateProgressBanner(
+                  "success",
+                  "Generation complete. Final output is being prepared...",
+                );
+              }
+              return;
+            }
+
+            if (payload.state === "ERROR" || payload.state === "CANCELLED") {
+              if (progressPoll) {
+                clearInterval(progressPoll);
+                progressPoll = null;
+              }
+              return;
+            }
+          } catch (err) {
+            console.warn("Progress polling error", err);
+            if (progressPoll) {
+              clearInterval(progressPoll);
+              progressPoll = null;
+            }
+            updateProgressBanner("error", "Unable to track job status.");
+            status.textContent = "Unable to check progress.";
+            status.className = "text-sm text-red-300";
+          }
+        }
+
+        function displayResult(j) {
+          outTitle.innerHTML = j.title || "No title";
+          document.getElementById("out-subtitle").textContent =
+            j.subtitle || "";
+          outTags.innerHTML = "";
+          if (typeof j.tags === "string") {
+            outTags.innerHTML = j.tags;
+          } else {
+            (j.tags || []).forEach((tag) => {
+              const pill = document.createElement("span");
+              pill.className = "tag-pill";
+              pill.textContent = tag;
+              outTags.appendChild(pill);
+            });
+          }
+          renderMarkdown(j.body || "");
+          out.classList.remove("hidden");
+          addSaveButton(j);
+        }
+
+        function addSaveButton(resultData) {
+          let btn = document.getElementById("save-gen-btn");
+          if (!btn) {
+            btn = document.createElement("button");
+            btn.id = "save-gen-btn";
+            btn.className =
+              "px-4 py-2 bg-emerald-600 rounded text-sm text-white hover:bg-emerald-500";
+            btn.textContent = "Save Result";
+            actionsContainer.appendChild(btn);
+            btn.addEventListener("click", async () => {
+              btn.disabled = true;
+              btn.textContent = "Saving...";
+              try {
+                const item = {
+                  id: "s_" + Date.now(),
+                  title: resultData.title || "No title",
+                  tags: resultData.tags || [],
+                  body: resultData.body || "",
+                  repo: loadConfig().repo_url || "",
+                  saved_at: new Date().toISOString(),
+                };
+                const r = await fetch("/api/saved", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ item }),
+                });
+                if (!r.ok) throw new Error("save failed");
+                btn.textContent = "Saved";
+                showToast("Saved to Saved Items");
+              } catch (err) {
+                btn.textContent = "Save Failed";
+                showToast("Save failed");
+                console.warn(err);
+              }
+            });
+          }
+        }
+
         genBtn.addEventListener("click", async () => {
-          status.textContent = "Generating... this may take a while";
+          resetProgressUI();
           out.classList.add("hidden");
           const cfg = loadConfig();
           const repo = cfg.repo_url || "";
           const style = cfg.style || "Technical Blog";
           const length = cfg.length || "Medium";
-          const model = cfg.model || "gemini-1.5-flash-latest";
+          const model = cfg.model || "Gemini 1.5 Flash Latest (Google)";
           const project_desc = cfg.project_desc || "";
           const uploads = cfg.uploads || [];
+
+          if (!repo) {
+            status.textContent = "Repository URL is required.";
+            status.className = "text-sm text-red-300";
+            return;
+          }
+
+          const goal = document.getElementById("gen-goal").value.trim();
+          const payload = {
+            repo_url: repo,
+            style,
+            length,
+            model,
+            goal,
+            project_desc,
+            uploads,
+          };
+
+          status.textContent = "Scheduling generation...";
+          status.className = "status-chip";
+          progressCard.classList.remove("hidden");
+          updateProgressBanner(
+            "",
+            "Queued for generation. Starting shortly...",
+          );
+          progressStage.textContent = "Queued";
+          addCancelButton();
+
           try {
-            const payload = {
-              repo_url: repo,
-              style: style,
-              length: length,
-              model: model,
-              goal: document.getElementById("gen-goal").value,
-              project_desc: project_desc,
-              uploads,
-            };
-            const res = await fetch("/api/generate", {
+            const res = await fetch("/api/generate_async", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify(payload),
             });
-            if (!res.ok) throw new Error("Network error");
-            const j = await res.json();
-            outTitle.innerHTML = j.title || "No title";
-            outTags.innerHTML = j.tags || "";
-            outBody.innerText = j.body || "";
-            out.classList.remove("hidden");
-            status.textContent = "Generation complete.";
-            // Persist this generation to history (best-effort)
-            (async function () {
-              try {
-                const entry = {
-                  id: "g_" + Date.now(),
-                  title: j.title || "No title",
-                  tags: j.tags || "",
-                  body: j.body || "",
-                  repo: repo,
-                  timestamp: new Date().toISOString(),
-                };
-                await fetch("/api/history", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ entry }),
-                });
-              } catch (e) {
-                console.warn("Failed to save history", e);
-              }
-            })();
-
-            // Add Save button into actions container
-            (function attachSave() {
-              let btn = document.getElementById("save-gen-btn");
-              if (!btn) {
-                const container =
-                  actionsContainer || document.querySelector(".mt-6.flex");
-                btn = document.createElement("button");
-                btn.id = "save-gen-btn";
-                btn.className =
-                  "px-4 py-2 bg-emerald-600 rounded text-sm text-white";
-                btn.textContent = "Save Result";
-                container.appendChild(btn);
-                btn.addEventListener("click", async () => {
-                  btn.disabled = true;
-                  btn.textContent = "Saving...";
-                  try {
-                    const item = {
-                      id: "s_" + Date.now(),
-                      title: j.title || "No title",
-                      tags: j.tags || "",
-                      body: j.body || "",
-                      repo: repo,
-                      saved_at: new Date().toISOString(),
-                    };
-                    const r = await fetch("/api/saved", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ item }),
-                    });
-                    if (!r.ok) throw new Error("save failed");
-                    btn.textContent = "Saved";
-                    showToast("Saved to Saved Items");
-                  } catch (err) {
-                    btn.textContent = "Save Failed";
-                    showToast("Save failed");
-                    console.warn(err);
-                  }
-                });
-              }
-            })();
+            if (!res.ok) {
+              const errorText = await res.text();
+              throw new Error(errorText || "Unable to start generation");
+            }
+            const data = await res.json();
+            activeJobId = data.job_id;
+            jobStartTime = Date.now();
+            await pollProgress(activeJobId);
+            progressPoll = setInterval(() => pollProgress(activeJobId), 1200);
           } catch (err) {
-            status.textContent = "Generation failed: " + (err.message || err);
+            progressCard.classList.remove("hidden");
+            updateProgressBanner("error", "Failed to start generation.");
+            status.textContent = "Generation failed to start.";
+            status.className = "text-sm text-red-300";
+            console.warn(err);
           }
         });
       });
     </script>
+    <script src="/static/sidebar-loader.js" defer></script>
   </body>
 </html>

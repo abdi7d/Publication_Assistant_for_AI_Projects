@@ -46,7 +46,7 @@ def list_groq_models():
         print(f"[Groq] Error listing models: {e}")
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     print("Listing available models for Gemini and Groq...")
     list_gemini_models()
     list_groq_models()

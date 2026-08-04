@@ -8,6 +8,14 @@ import tempfile
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from importlib import util
+from pathlib import Path
+
+compat_path = Path(__file__).resolve().parent / "compat_testclient.py"
+spec = util.spec_from_file_location("compat_testclient", compat_path)
+compat_testclient = util.module_from_spec(spec)
+spec.loader.exec_module(compat_testclient)
+CompatTestClient = compat_testclient.CompatTestClient
 
 
 @pytest.fixture(scope="session")
@@ -21,7 +29,7 @@ def event_loop():
 def test_client():
     # Import the real FastAPI app from app.py
     from app import app as real_app
-    client = TestClient(real_app)
+    client = CompatTestClient(real_app)
     yield client
 
 
@@ -29,7 +37,7 @@ def test_client():
 def client():
     # Import the real FastAPI app from app.py
     from app import app as real_app
-    client = TestClient(real_app)
+    client = CompatTestClient(real_app)
     return client
 
 

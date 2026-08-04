@@ -1,9 +1,10 @@
 # agents/fact_checker.py
 from dataclasses import dataclass
 from typing import List
-from tools.arxiv_scholar import ArxivScholarTool
 import logging
 import re
+
+from tools.arxiv_scholar import ArxivScholarTool
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +18,7 @@ class FactCheckResult:
 
 class FactCheckerAgent:
     """
-    Fact-checker that extracts claims and looks up papers on arXiv to verify them.
+    Extracts plausible technical claims from README content and verifies them when a scholar tool is available.
     """
 
     def __init__(self, scholar_tool: ArxivScholarTool):
@@ -25,24 +26,50 @@ class FactCheckerAgent:
 
     def run(self, readme_text: str) -> FactCheckResult:
         logger.info("FactCheckerAgent: extracting claims")
+        claims = self._extract_claims(readme_text)
+        verified: List[str] = []
+        flagged: List[str] = []
 
-        # Simple extraction of "scientific" looking sentences
-        # In production this would use an LLM extractor
-        sentences = re.split(r'[.!?]', readme_text)
-        claims = [s.strip() for s in sentences if len(s) > 30 and
-                  any(w in s.lower() for w in ["novel", "state-of-the-art", "outperforms", "significant", "paper", "proposed"])]
-
-        verified = []
-        flagged = []
-
-        for c in claims[:3]:  # Limit checks to avoid rate limits
-            logger.info(f"Verifying claim: {c[:50]}...")
-            hits = self.scholar.search(c, max_results=1)
+        for claim in claims[:3]:
+            logger.info("Verifying claim: %s", claim[:80])
+            if self.scholar is None:
+                flagged.append(
+                    f"{claim} (Verification unavailable - no scholar tool configured)")
+                continue
+            try:
+                hits = self.scholar.search(claim, max_results=1)
+            except Exception:
+                flagged.append(
+                    f"{claim} (Verification failed due to an external error)")
+                continue
             if hits:
-                verified.append(f"{c} (Found paper: {hits[0]['title']})")
+                verified.append(f"{claim} (Found paper: {hits[0]['title']})")
             else:
-                flagged.append(f"{c} (No direct match found)")
+                flagged.append(f"{claim} (No direct match found)")
 
-        result = FactCheckResult(
-            claims_found=claims, verified=verified, flagged=flagged)
-        return result
+        return FactCheckResult(claims_found=claims, verified=verified, flagged=flagged)
+
+    def _extract_claims(self, readme_text: str) -> List[str]:
+        if not readme_text:
+            return []
+        sentences = re.split(r"(?<=[.!?])\s+", readme_text)
+        claims = []
+        patterns = [
+            r"\b(novel|state-of-the-art|outperforms|significant|proposed|benchmark|advanced|research|groundbreaking|innovative|powerful)\b",
+            r"\b(this project|this system|it can|powered by|built on|designed for|provides|supports|enables)\b",
+        ]
+        for sentence in sentences:
+            cleaned = sentence.strip()
+            if len(cleaned) <= 30:
+                continue
+            lowered = cleaned.lower()
+            if any(re.search(pattern, lowered) for pattern in patterns):
+                claims.append(cleaned)
+        # Keep unique claims while preserving order
+        unique_claims = []
+        seen = set()
+        for claim in claims:
+            if claim not in seen:
+                seen.add(claim)
+                unique_claims.append(claim)
+        return unique_claims

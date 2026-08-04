@@ -1,11 +1,11 @@
 # tools/rag_retriever.py
-import os
 import logging
+import os
 import uuid
 from typing import List
+
 try:
     import chromadb
-    from chromadb.config import Settings
 except Exception:
     chromadb = None
 try:
@@ -20,39 +20,72 @@ class RAGRetriever:
     def __init__(self, db_path: str = "./chroma_db"):
         self.client = None
         self.collection = None
-        self.embed_model = 'models/gemini-embedding-001'
+        self.embed_model = "models/gemini-embedding-001"
 
-        # Ensure we have dependencies
         if chromadb is None:
             logger.warning(
                 "chromadb not installed. RAG functionality disabled.")
             return
 
-        # If a persistent DB path was provided but does not exist, skip initializing
-        # chromadb to avoid rust binding panics in lightweight test environments.
         try:
             if db_path and not os.path.exists(db_path):
                 logger.warning(
                     "RAG DB path %s does not exist; skipping chromadb init", db_path)
                 return
         except Exception:
-            # If any filesystem check fails, proceed to safe init below
             pass
 
         try:
-            # Use a persistent client with a specific path
             self.client = chromadb.PersistentClient(path=db_path)
             self.collection = self.client.get_or_create_collection(
                 "project_suggestions")
-
-            # Check if empty, then seed
             if self.collection.count() == 0:
                 self.seed_knowledge_base()
-        except BaseException as e:
-            # Catch BaseException to handle Rust panics surfaced via pyo3 (PanicException)
-            logger.error(f"Failed to initialize RAG system: {e}")
+        except BaseException as exc:
+            logger.error("Failed to initialize RAG system: %s", exc)
             self.client = None
             self.collection = None
+
+    @staticmethod
+    def _ensure_list_floats(obj) -> list | None:
+        """Recursively unwrap common SDK embedding containers into a plain list of floats."""
+        try:
+            # direct list/tuple of numbers
+            if isinstance(obj, (list, tuple)):
+                # If the list contains SDK wrapper objects, try to unwrap first element
+                if obj and not all(isinstance(x, (int, float)) for x in obj):
+                    # try unwrap each element
+                    for item in obj:
+                        candidate = RAGRetriever._ensure_list_floats(item)
+                        if candidate:
+                            return candidate
+                    return None
+                return [float(x) for x in obj]
+
+            # If obj is a mapping-like returned in .data
+            from collections.abc import Mapping
+            if isinstance(obj, Mapping):
+                # common key names
+                for key in ("embedding", "values", "embeddings"):
+                    if key in obj:
+                        return RAGRetriever._ensure_list_floats(obj[key])
+
+            # Common SDK attributes
+            if hasattr(obj, "values"):
+                vals = getattr(obj, "values")
+                return RAGRetriever._ensure_list_floats(vals)
+
+            if hasattr(obj, "embedding"):
+                val = getattr(obj, "embedding")
+                return RAGRetriever._ensure_list_floats(val)
+
+            if hasattr(obj, "embeddings"):
+                embs = getattr(obj, "embeddings")
+                return RAGRetriever._ensure_list_floats(embs)
+
+        except Exception:
+            return None
+        return None
 
     def seed_knowledge_base(self):
         sample_docs = [
@@ -65,66 +98,57 @@ class RAGRetriever:
             "Structure the project with clearly defined folders: agents, tools, utils.",
             "Add unit tests using pytest in a 'tests/' directory.",
             "Provide a 'Quick Start' section for immediate gratification.",
-            "List all dependencies clearly in requirements.txt or pyproject.toml."
+            "List all dependencies clearly in requirements.txt or pyproject.toml.",
         ]
 
         if self.collection is None:
             return
-
         if genai is None or not os.getenv("GOOGLE_API_KEY"):
             logger.warning("RAG seed skipped: missing genai or API key.")
             return
 
         try:
             client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
+
             for doc in sample_docs:
-                embedding = client.models.embed_content(
-                    model=self.embed_model,
-                    contents=doc
-                ).embedding
-                self.collection.add(
-                    ids=[str(uuid.uuid4())],
-                    embeddings=[embedding],
-                    documents=[doc]
-                )
+                resp = client.models.embed_content(
+                    model=self.embed_model, contents=doc)
+                embedding = RAGRetriever._ensure_list_floats(resp)
+                if not embedding:
+                    logger.warning(
+                        "RAG seed: could not extract embedding for sample doc; skipping.")
+                    continue
+                # chroma expects a list of floats (or list-of-lists); pass plain list
+                self.collection.add(ids=[str(uuid.uuid4())], embeddings=[
+                                    embedding], documents=[doc])
             logger.info("Seeded RAG knowledge base with %d items.",
                         len(sample_docs))
-        except Exception as e:
-            logger.error(f"Error seeding RAG: {e}")
+        except Exception as exc:
+            logger.error("Error seeding RAG: %s", exc)
 
     def retrieve(self, text: str, top_k: int = 3) -> List[str]:
-        """
-        Retrieves relevant suggestions based on the input text.
-        """
-        if not text:
+        """Retrieve relevant suggestions based on the input text."""
+        if not text or self.collection is None:
             return []
-
-        if self.collection is None:
-            logger.warning(
-                "RAG retrieve called but collection is not initialized.")
-            return []
-
         if genai is None or not os.getenv("GOOGLE_API_KEY"):
-            logger.warning("RAG retrieve skipped: missing genai or API key.")
             return []
 
         try:
             client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
-            # Generate embedding for query
-            query_embedding = client.models.embed_content(
-                model=self.embed_model,
-                contents=text[:1000]
-            ).embedding
+
+            resp = client.models.embed_content(
+                model=self.embed_model, contents=text[:1000])
+            query_embedding = RAGRetriever._ensure_list_floats(resp)
+            if query_embedding is None:
+                logger.error(
+                    "RAG retrieval error: could not extract query embedding from response: %s", type(resp))
+                return []
 
             results = self.collection.query(
-                query_embeddings=[query_embedding],
-                n_results=top_k
-            )
-
-            if results and results['documents']:
-                # Flatten the list of lists
-                return [doc for sublist in results['documents'] for doc in sublist]
+                query_embeddings=[query_embedding], n_results=top_k)
+            if results and results.get("documents"):
+                return [doc for sublist in results["documents"] for doc in sublist]
             return []
-        except Exception as e:
-            logger.error(f"RAG retrieval error: {e}")
+        except Exception as exc:
+            logger.error("RAG retrieval error: %s", exc)
             return []
