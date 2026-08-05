@@ -123,36 +123,39 @@
     </div>
 
     <script>
-      const ports = [7860, 7861, 7862];
-      const baseUrls = ports.map((port) => `http://127.0.0.1:${port}/`);
+      var ports = [7860, 7861, 7862];
+      var baseUrls = ports.map(function(port) {
+        return 'http://127.0.0.1:' + port + '/';
+      });
 
       async function findAvailableGradioUrl(urls) {
-        const checks = urls.map((url) => {
-          return fetchWithTimeout(url + "favicon.ico", 2000, {
-            mode: "no-cors",
-          })
-            .then(() => url)
-            .catch(() => Promise.reject());
-        });
-        try {
-          return await Promise.any(checks);
-        } catch {
-          return null;
+        // Try each URL sequentially for better browser compatibility
+        for (var i = 0; i < urls.length; i++) {
+          try {
+            var response = await fetchWithTimeout(urls[i], 2000, { mode: 'cors' });
+            if (response && response.ok) {
+              return urls[i];
+            }
+          } catch (e) {
+            // Continue to next URL
+            continue;
+          }
         }
+        return null;
       }
 
-      function fetchWithTimeout(url, timeoutMs, options = {}) {
-        return new Promise((resolve, reject) => {
-          const timer = setTimeout(
-            () => reject(new Error("timeout")),
-            timeoutMs,
-          );
+      function fetchWithTimeout(url, timeoutMs, options) {
+        return new Promise(function(resolve, reject) {
+          var timer = setTimeout(function() {
+            reject(new Error('timeout'));
+          }, timeoutMs);
+          
           fetch(url, options)
-            .then((response) => {
+            .then(function(response) {
               clearTimeout(timer);
               resolve(response);
             })
-            .catch((err) => {
+            .catch(function(err) {
               clearTimeout(timer);
               reject(err);
             });
@@ -160,30 +163,32 @@
       }
 
       async function redirectToGradio() {
-        const target = await findAvailableGradioUrl(baseUrls);
+        var target = await findAvailableGradioUrl(baseUrls);
         if (target) {
           window.location.href = target;
           return;
         }
 
         // Fallback: show error if no Gradio port is running
-        document.querySelector(".glass-card").innerHTML = `
-          <div class="text-center space-y-4">
-            <div class="text-4xl">⚠️</div>
-            <h2 class="text-xl font-semibold text-white">Gradio Interface Not Running</h2>
-            <p class="text-sm text-slate-400">
-              The Gradio interface is not currently running. Please start Gradio on one of the local ports 7860, 7861, or 7862.
-            </p>
-            <div class="bg-slate-800/50 rounded-lg p-4 text-left">
-              <p class="text-xs text-slate-300 mb-2">To launch Gradio, run:</p>
-              <code class="text-xs text-indigo-400 bg-slate-900 px-2 py-1 rounded">python app.py</code>
-            </div>
-            <p class="text-xs text-slate-500 mt-4">Redirecting to launcher in a moment...</p>
-          </div>
-        `;
+        var glassCard = document.querySelector('.glass-card');
+        if (glassCard) {
+          glassCard.innerHTML = 
+            '<div class="text-center space-y-4">' +
+              '<div class="text-4xl">⚠️</div>' +
+              '<h2 class="text-xl font-semibold text-white">Gradio Interface Not Running</h2>' +
+              '<p class="text-sm text-slate-400">' +
+                'The Gradio interface is not currently running. Please start Gradio on one of the local ports 7860, 7861, or 7862.' +
+              '</p>' +
+              '<div class="bg-slate-800/50 rounded-lg p-4 text-left">' +
+                '<p class="text-xs text-slate-300 mb-2">To launch Gradio, run:</p>' +
+                '<code class="text-xs text-indigo-400 bg-slate-900 px-2 py-1 rounded">python app.py</code>' +
+              '</div>' +
+              '<p class="text-xs text-slate-500 mt-4">Redirecting to launcher in a moment...</p>' +
+            '</div>';
+        }
 
-        setTimeout(() => {
-          window.location.href = "/";
+        setTimeout(function() {
+          window.location.href = '/';
         }, 5000);
       }
 

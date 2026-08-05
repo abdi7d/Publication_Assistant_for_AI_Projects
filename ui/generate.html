@@ -64,6 +64,9 @@
         margin-bottom: 2rem;
       }
       .section-card {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
         background: rgba(15, 23, 42, 0.6);
         border: 1px solid rgba(255, 255, 255, 0.08);
         backdrop-filter: blur(20px);
@@ -672,7 +675,7 @@
 
               <!-- BEGIN: Grid Layout for Config & Preview -->
               <div
-                class="grid grid-cols-1 lg:grid-cols-3 gap-8 content-section"
+                class="grid grid-cols-1 md:grid-cols-[minmax(0,28%)_minmax(0,72%)] gap-8 content-section"
                 data-purpose="config-row"
               >
                 <div
@@ -823,7 +826,7 @@
                     </h3>
                   </div>
           <p class="text-xs text-slate-400 mb-6">
-            Upload PDFs or docs to provide additional context for better
+            Upload ZIP, PDFs or docs to provide additional context for better
             results.
           </p>
           <div
@@ -891,6 +894,7 @@
             No files uploaded
           </div>
                 </div>
+              </div>
 
                 <div
                   class="section-card"
@@ -1038,7 +1042,7 @@
                     ></textarea>
                     <p class="text-xs text-slate-400 mt-2">
                       This generation will use the configuration set in
-                      <a href="index.html" class="text-indigo-400">Configuration</a>.
+                      <a href="generate.html" class="text-indigo-400">Project Setup</a>.
                     </p>
                   </div>
                   <div
@@ -1182,23 +1186,8 @@
           if (!s) return;
           const cfg = loadConfig();
           const repo = cfg.repo_url || "Not set";
-          const style = cfg.style || "Technical Blog";
-          const length = cfg.length || "Medium";
-          const model = cfg.model || "Gemini 1.5 Flash Latest (Google)";
-          const mode = cfg.project_mode || "Create New Project";
-          const desc = cfg.project_desc || "Not set";
-          const uploads = (cfg.uploads || []).length;
           s.innerHTML = `
-            <div class="font-semibold">Repository:</div>
-            <div class="text-xs text-slate-400 mb-2">${repo}</div>
-            <div class="font-semibold">Style</div>
-            <div class="text-xs text-slate-400">${style} • ${length} • ${model}</div>
-            <div class="font-semibold mt-4">Project Mode</div>
-            <div class="text-xs text-slate-400">${mode}</div>
-            <div class="font-semibold mt-4">Description</div>
-            <div class="text-xs text-slate-400">${desc}</div>
-            <div class="font-semibold mt-4">Uploaded files</div>
-            <div class="text-xs text-slate-400">${uploads}</div>
+            <div class="text-sm text-slate-400">Configuration loaded successfully</div>
           `;
         }
 

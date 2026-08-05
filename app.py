@@ -203,8 +203,24 @@ def save_project(project_id: str, repo_url: str, metadata: dict = None):
 
 def validate_submission(repo_url: str, goal: str = "", project_desc: str = "") -> tuple[bool, str]:
     """Validate repository and prompt inputs before running the agent pipeline."""
-    # Use comprehensive validation
-    return validate_comprehensive_submission(repo_url, goal, project_desc)
+    # Use more lenient validation similar to Gradio UI
+    if not repo_url or not repo_url.strip():
+        return False, "Repository URL is required"
+    
+    # Basic URL format check
+    repo_url = repo_url.strip()
+    if len(repo_url) > 2000:
+        return False, "Repository URL is too long (max 2000 characters)"
+    
+    # Check for dangerous patterns only
+    dangerous_patterns = ['<script', 'javascript:', 'data:', 'vbscript:', 'file://', 'ftp://', '../', '..\\', '\x00', '\r', '\n', '\t']
+    for pattern in dangerous_patterns:
+        if pattern in repo_url.lower():
+            return False, "Repository URL contains invalid characters"
+    
+    # Allow the actual parsing to validate if the repo is accessible
+    # This matches the Gradio UI behavior
+    return True, ""
 
 
 def slugify(text: str) -> str:
@@ -318,6 +334,11 @@ def validate_repo_logic(repo_url):
     """Handles the repo validation for the UI button."""
     if not repo_url:
         return "⚠️ Please enter a repository URL.", ""
+
+    # Use the same validation as generation process
+    valid, error = validate_submission(repo_url)
+    if not valid:
+        return f"❌ {error}", ""
 
     parser = RepoParser()
     try:

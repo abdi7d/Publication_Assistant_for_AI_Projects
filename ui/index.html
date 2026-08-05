@@ -261,27 +261,33 @@
       }
 
       async function findAvailableGradioUrl(urls) {
-        const checks = urls.map((url) => {
-          return fetchWithTimeout(url + 'favicon.ico', 2000, { mode: 'no-cors' })
-            .then(() => url)
-            .catch(() => Promise.reject());
-        });
-        try {
-          return await Promise.any(checks);
-        } catch {
-          return null;
+        // Try each URL sequentially for better browser compatibility
+        for (var i = 0; i < urls.length; i++) {
+          try {
+            var response = await fetchWithTimeout(urls[i], 2000, { mode: 'cors' });
+            if (response && response.ok) {
+              return urls[i];
+            }
+          } catch (e) {
+            // Continue to next URL
+            continue;
+          }
         }
+        return null;
       }
 
-      function fetchWithTimeout(url, timeoutMs, options = {}) {
-        return new Promise((resolve, reject) => {
-          const timer = setTimeout(() => reject(new Error('timeout')), timeoutMs);
+      function fetchWithTimeout(url, timeoutMs, options) {
+        return new Promise(function(resolve, reject) {
+          var timer = setTimeout(function() {
+            reject(new Error('timeout'));
+          }, timeoutMs);
+          
           fetch(url, options)
-            .then((response) => {
+            .then(function(response) {
               clearTimeout(timer);
               resolve(response);
             })
-            .catch((err) => {
+            .catch(function(err) {
               clearTimeout(timer);
               reject(err);
             });
