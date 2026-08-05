@@ -10,6 +10,8 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap"
       rel="stylesheet"
     />
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="/static/shared.js"></script>
     <script>
       tailwind.config = {
         darkMode: "class",
@@ -286,8 +288,23 @@
         grid-template-columns: auto 1fr;
         align-items: flex-start;
         gap: 0.75rem;
-        padding: 0.95rem 0;
-        border-bottom: 1px solid rgba(148, 163, 184, 0.08);
+        padding: 1.25rem;
+        border-radius: 1rem;
+        border: 1px solid rgba(148, 163, 184, 0.12);
+        background: rgba(15, 23, 42, 0.95);
+        transition: all 0.3s ease;
+        animation: slideIn 0.4s ease-out;
+      }
+
+      @keyframes slideIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
       }
 
       .progress-step:last-child {
@@ -296,33 +313,57 @@
 
       .progress-step.active {
         opacity: 1;
+        transform: scale(1.02);
+        border-color: rgba(56, 189, 248, 0.4);
+        box-shadow: 0 0 30px rgba(56, 189, 248, 0.2);
       }
 
       .progress-step.pending {
-        opacity: 0.7;
+        opacity: 0.8;
       }
 
       .step-icon {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: 2.25rem;
-        height: 2.25rem;
+        width: 2.75rem;
+        height: 2.75rem;
         border-radius: 9999px;
         background: rgba(71, 85, 105, 0.14);
         color: #7dd3fc;
-        font-size: 0.95rem;
+        font-size: 1.1rem;
+        font-weight: 600;
         flex-shrink: 0;
+        transition: all 0.3s ease;
       }
 
       .progress-step.active .step-icon {
         background: rgba(56, 189, 248, 0.18);
         animation: pulse 1.4s ease-in-out infinite;
+        box-shadow: 0 0 25px rgba(56, 189, 248, 0.4);
       }
 
       .progress-step.completed .step-icon {
         background: rgba(52, 211, 153, 0.18);
         color: #a7f3d0;
+      }
+
+      .progress-step.failed .step-icon {
+        background: rgba(248, 113, 113, 0.18);
+        color: #fecaca;
+      }
+
+      .step-label {
+        font-weight: 600;
+        color: #f8fafc;
+        font-size: 1rem;
+        margin-bottom: 0.25rem;
+      }
+
+      .step-detail {
+        color: #94a3b8;
+        font-size: 0.875rem;
+        line-height: 1.4;
       }
 
       .spinner {
@@ -343,6 +384,17 @@
           transform: rotate(360deg);
         }
       }
+
+      @keyframes pulse {
+        0%, 100% {
+          opacity: 1;
+          transform: scale(1);
+        }
+        50% {
+          opacity: 0.8;
+          transform: scale(1.05);
+        }
+      }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
@@ -361,6 +413,19 @@
       <div class="absolute inset-0 bg-gradient-to-t from-slate-950/95 via-slate-950/45 to-transparent"></div>
       <div class="relative z-10 mx-auto flex h-screen max-w-[1600px] flex-col lg:grid lg:grid-cols-[320px_minmax(0,1fr)]">
         <div id="sidebar-root"></div>
+        <!-- Theme Toggle Button -->
+        <button
+          data-theme-toggle
+          onclick="ThemeManager.toggle()"
+          class="fixed top-4 right-4 z-50 p-2 rounded-xl bg-slate-800/80 backdrop-blur-xl border border-slate-700 text-white hover:bg-slate-700 transition-all duration-200 hover:scale-105"
+          aria-label="Toggle theme"
+        >
+          <span class="theme-icon">
+            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
+            </svg>
+          </span>
+        </button>
         <main class="flex h-screen flex-1 items-start justify-center overflow-y-auto px-4 py-6 sm:px-6 lg:px-8">
           <div class="w-full max-w-6xl">
             <div class="glass-card rounded-[28px] p-4 sm:p-6 lg:p-8">
@@ -1292,46 +1357,64 @@
 
         function renderStepList(steps) {
           progressSteps.innerHTML = "";
-          steps.forEach((step, index) => {
-            const row = document.createElement("div");
-            const status = step.status || "PENDING";
-            const stateClass =
-              status === "COMPLETE"
-                ? "completed"
-                : status === "IN_PROGRESS"
-                  ? "active"
-                  : status === "FAILED"
-                    ? "failed"
-                    : "pending";
-            row.className = `progress-step ${stateClass}`;
+          
+          // Find the current step to display (either IN_PROGRESS or first PENDING)
+          const currentStep = steps.find(s => s.status === "IN_PROGRESS") || 
+                            steps.find(s => s.status === "PENDING") ||
+                            steps[steps.length - 1];
+          
+          if (!currentStep) return;
+          
+          const stepIndex = steps.indexOf(currentStep);
+          const totalSteps = steps.length;
+          const completedSteps = steps.filter(s => s.status === "COMPLETE").length;
+          
+          // Create current step display
+          const row = document.createElement("div");
+          const status = currentStep.status || "PENDING";
+          const stateClass =
+            status === "COMPLETE"
+              ? "completed"
+              : status === "IN_PROGRESS"
+                ? "active"
+                : status === "FAILED"
+                  ? "failed"
+                  : "pending";
+          row.className = `progress-step ${stateClass}`;
 
-            const icon = document.createElement("div");
-            icon.className = "step-icon";
-            if (status === "COMPLETE") {
-              icon.textContent = "✓";
-            } else if (status === "IN_PROGRESS") {
-              icon.innerHTML = '<span class="spinner"></span>';
-            } else if (status === "FAILED") {
-              icon.textContent = "✕";
-            } else {
-              icon.textContent = index + 1;
-            }
+          const icon = document.createElement("div");
+          icon.className = "step-icon";
+          if (status === "COMPLETE") {
+            icon.textContent = "✓";
+          } else if (status === "IN_PROGRESS") {
+            icon.innerHTML = '<span class="spinner"></span>';
+          } else if (status === "FAILED") {
+            icon.textContent = "✕";
+          } else {
+            icon.textContent = stepIndex + 1;
+          }
 
-            const detail = document.createElement("div");
-            const label = document.createElement("div");
-            label.className = "step-label";
-            label.textContent = step.name.replace(/_/g, " ");
-            const desc = document.createElement("div");
-            desc.className = "step-detail";
-            desc.textContent =
-              step.detail || (status === "COMPLETE" ? "Complete" : "Pending");
-            detail.appendChild(label);
-            detail.appendChild(desc);
+          const detail = document.createElement("div");
+          const label = document.createElement("div");
+          label.className = "step-label";
+          label.textContent = currentStep.name.replace(/_/g, " ");
+          const desc = document.createElement("div");
+          desc.className = "step-detail";
+          desc.textContent = currentStep.detail || 
+                          (status === "COMPLETE" ? "Complete" : 
+                           status === "IN_PROGRESS" ? "Processing..." : "Pending");
+          detail.appendChild(label);
+          detail.appendChild(desc);
 
-            row.appendChild(icon);
-            row.appendChild(detail);
-            progressSteps.appendChild(row);
-          });
+          row.appendChild(icon);
+          row.appendChild(detail);
+          progressSteps.appendChild(row);
+          
+          // Add progress indicator showing which step we're on
+          const progressIndicator = document.createElement("div");
+          progressIndicator.className = "mt-4 text-xs text-slate-400 text-center";
+          progressIndicator.textContent = `Step ${stepIndex + 1} of ${totalSteps} • ${completedSteps} completed`;
+          progressSteps.appendChild(progressIndicator);
         }
 
         function updateProgressStatus(payload) {
@@ -1568,17 +1651,8 @@
           addCancelButton();
 
           try {
-            const res = await fetch("/api/generate_async", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(payload),
-            });
-            if (!res.ok) {
-              const errorText = await res.text();
-              throw new Error(errorText || "Unable to start generation");
-            }
-            const data = await res.json();
-            activeJobId = data.job_id;
+            const res = await APIClient.post("/api/generate_async", payload);
+            activeJobId = res.job_id;
             jobStartTime = Date.now();
             await pollProgress(activeJobId);
             progressPoll = setInterval(() => pollProgress(activeJobId), 1200);
@@ -1587,11 +1661,114 @@
             updateProgressBanner("error", "Failed to start generation.");
             status.textContent = "Generation failed to start.";
             status.className = "text-sm text-red-300";
+            NotificationManager.show("Failed to start generation", "error");
             console.warn(err);
           }
         });
       });
     </script>
-    <script src="/static/sidebar-loader.js" defer></script>
+    <script src="/static/shared.js"></script>
+    <script src="/static/sidebar-loader.js"></script>
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        // Initialize shared utilities
+        ThemeManager.init();
+        
+        // Load sidebar manually as fallback
+        const loadSidebar = async () => {
+          const sidebarRoot = document.getElementById("sidebar-root");
+          if (!sidebarRoot) return;
+
+          try {
+            const response = await fetch("/static/sidebar.html");
+            if (response.ok) {
+              sidebarRoot.innerHTML = await response.text();
+            } else {
+              throw new Error('Sidebar fetch failed');
+            }
+          } catch (error) {
+            console.error("Sidebar include error:", error);
+            // Fallback inline sidebar
+            sidebarRoot.innerHTML = `
+              <aside class="hidden lg:sticky lg:top-0 lg:flex lg:h-screen lg:max-h-screen lg:flex-col overflow-hidden border-r border-white/10 bg-slate-950/80 backdrop-blur-xl">
+                <div class="px-6 py-5 mt-12">
+                  <div class="flex items-center gap-3">
+                    <div class="grid h-12 w-12 place-items-center rounded-3xl bg-gradient-to-br from-indigo-500 to-cyan-400 shadow-[0_24px_80px_-40px_rgba(56,189,248,0.65)]">
+                      <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 2L14.4 7.2L20 8L16 12L16.8 17.6L12 15.2L7.2 17.6L8 12L4 8L9.6 7.2L12 2Z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+                      </svg>
+                    </div>
+                    <div>
+                      <p class="text-xs uppercase tracking-[0.35em] text-slate-400">Publication Assistant</p>
+                      <h1 class="text-lg font-semibold text-white">for AI Projects</h1>
+                    </div>
+                  </div>
+                </div>
+                <nav class="flex-1 space-y-2 px-4 pb-4">
+                  <a class="flex items-center gap-3 rounded-3xl px-4 py-3 text-slate-300 transition hover:bg-white/10 hover:text-white" href="index.html">
+                    <span class="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-800 text-sky-300">
+                      <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+                      </svg>
+                    </span>
+                    <span class="font-medium">Home</span>
+                  </a>
+                  <a class="flex items-center gap-3 rounded-3xl bg-slate-900/70 px-4 py-3 text-slate-100 transition hover:bg-white/10" href="generate.html">
+                    <span class="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-800 text-sky-400">
+                      <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path d="M13 10V3L4 14h7v7l9-11h-7z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+                      </svg>
+                    </span>
+                    <span class="font-medium">Generate Article</span>
+                  </a>
+                  <a class="flex items-center gap-3 rounded-3xl px-4 py-3 text-slate-300 transition hover:bg-white/10 hover:text-white" href="results.html">
+                    <span class="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-800 text-violet-300">
+                      <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 00-2 2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+                      </svg>
+                    </span>
+                    <span class="font-medium">Results</span>
+                  </a>
+                  <a class="flex items-center gap-3 rounded-3xl px-4 py-3 text-slate-300 transition hover:bg-white/10 hover:text-white" href="projects.html">
+                    <span class="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-800 text-cyan-300">
+                      <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+                      </svg>
+                    </span>
+                    <span class="font-medium">Projects</span>
+                  </a>
+                  <a class="flex items-center gap-3 rounded-3xl px-4 py-3 text-slate-300 transition hover:bg-white/10 hover:text-white" href="history.html">
+                    <span class="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-800 text-emerald-300">
+                      <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+                      </svg>
+                    </span>
+                    <span class="font-medium">History</span>
+                  </a>
+                  <a class="flex items-center gap-3 rounded-3xl px-4 py-3 text-slate-300 transition hover:bg-white/10 hover:text-white" href="saved.html">
+                    <span class="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-800 text-fuchsia-300">
+                      <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+                      </svg>
+                    </span>
+                    <span class="font-medium">Saved</span>
+                  </a>
+                  <a class="flex items-center gap-3 rounded-3xl px-4 py-3 text-slate-300 transition hover:bg-white/10 hover:text-white" href="analytics.html">
+                    <span class="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-800 text-amber-300">
+                      <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+                      </svg>
+                    </span>
+                    <span class="font-medium">Analytics</span>
+                  </a>
+                </nav>
+              </aside>
+            `;
+          }
+        };
+        
+        loadSidebar();
+      });
+    </script>
   </body>
 </html>

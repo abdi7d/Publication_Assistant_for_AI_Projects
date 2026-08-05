@@ -89,7 +89,21 @@
         letter-spacing: -0.055em;
         color: #f8fafc;
       }
+      @keyframes slideIn {
+        from {
+          opacity: 0;
+          transform: translateX(-10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(0);
+        }
+      }
+      .animate-slide-in {
+        animation: slideIn 0.3s ease-out;
+      }
     </style>
+    <script src="/static/shared.js"></script>
   </head>
   <body class="dark h-screen overflow-hidden">
     <div class="page-shell h-screen overflow-hidden">
@@ -111,6 +125,19 @@
         class="relative z-10 mx-auto flex h-screen max-w-[1600px] flex-col lg:grid lg:grid-cols-[320px_minmax(0,1fr)]"
       >
         <div id="sidebar-root"></div>
+        <!-- Theme Toggle Button -->
+        <button
+          data-theme-toggle
+          onclick="ThemeManager.toggle()"
+          class="fixed top-4 right-4 z-50 p-2 rounded-xl bg-slate-800/80 backdrop-blur-xl border border-slate-700 text-white hover:bg-slate-700 transition-all duration-200 hover:scale-105"
+          aria-label="Toggle theme"
+        >
+          <span class="theme-icon">
+            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
+            </svg>
+          </span>
+        </button>
         <main
           class="flex h-screen flex-1 items-start justify-center overflow-y-auto px-4 py-6 sm:px-6 lg:px-8"
         >
@@ -139,38 +166,54 @@
       </div>
     </div>
     <script>
-      const storedTheme = localStorage.getItem("theme");
-      if (storedTheme === "light")
-        document.documentElement.classList.remove("dark");
-      else document.documentElement.classList.add("dark");
-
       async function loadSaved() {
         try {
-          const res = await fetch("/api/saved");
-          const j = await res.json();
+          const res = await APIClient.get("/api/saved");
           const el = document.getElementById("saved-list");
-          const items = (j && j.items) || [];
+          const items = (res && res.items) || [];
+          
           if (items.length === 0) {
-            el.innerHTML = '<div class="text-slate-400">No saved items.</div>';
+            el.innerHTML = `
+              <div class="flex flex-col items-center justify-center py-12 space-y-4">
+                <div class="text-4xl">🔖</div>
+                <p class="text-slate-400">No saved items yet</p>
+                <a href="generate.html" class="text-indigo-400 hover:text-indigo-300 transition-colors">
+                  Generate and save your first result →
+                </a>
+              </div>
+            `;
             return;
           }
+          
           el.innerHTML = items
-            .map((it) => {
+            .map((it, index) => {
               const timestamp = it.saved_at || it.timestamp || it.time || "";
-              const dateText = timestamp
-                ? new Date(timestamp).toLocaleString()
-                : "";
+              const dateText = timestamp ? DateFormatter.formatRelative(timestamp) : "";
               const summary = it.summary || it.body || it.repo || "";
-              return `<div class="p-3 bg-slate-800 rounded mb-2"><div class=\"font-semibold\">${it.title || it.id}</div><div class=\"text-xs text-slate-400\">${summary.substring(0, 120)}</div>${dateText ? `<div class=\"text-xs text-slate-500 mt-1\">${dateText}</div>` : ""}</div>`;
+              return `
+                <div class="p-4 bg-slate-800/50 rounded-xl border border-slate-700 hover:border-slate-600 transition-all duration-200 mb-2 animate-slide-in" style="animation-delay: ${index * 50}ms">
+                  <div class="font-semibold text-white">${it.title || it.id}</div>
+                  <div class="text-xs text-slate-400 mt-1">${summary.substring(0, 120)}</div>
+                  ${dateText ? `<div class="text-xs text-slate-500 mt-2">${dateText}</div>` : ""}
+                </div>
+              `;
             })
             .join("");
         } catch (e) {
-          document.getElementById("saved-list").textContent =
-            "Failed to load saved items";
+          document.getElementById("saved-list").innerHTML = `
+            <div class="flex flex-col items-center justify-center py-12 space-y-4">
+              <div class="text-4xl">⚠️</div>
+              <p class="text-slate-400">Failed to load saved items</p>
+              <button onclick="loadSaved()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-sm font-medium transition-colors">
+                Retry
+              </button>
+            </div>
+          `;
+          NotificationManager.show("Failed to load saved items", "error");
         }
       }
       loadSaved();
     </script>
-    <script src="/static/sidebar-loader.js" defer></script>
+    <script src="/static/sidebar-loader.js"></script>
   </body>
 </html>

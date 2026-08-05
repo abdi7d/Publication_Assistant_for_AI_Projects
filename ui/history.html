@@ -89,7 +89,21 @@
         letter-spacing: -0.055em;
         color: #f8fafc;
       }
+      @keyframes slideIn {
+        from {
+          opacity: 0;
+          transform: translateX(-10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(0);
+        }
+      }
+      .animate-slide-in {
+        animation: slideIn 0.3s ease-out;
+      }
     </style>
+    <script src="/static/shared.js"></script>
   </head>
   <body class="dark h-screen overflow-hidden">
     <div class="page-shell h-screen overflow-hidden">
@@ -111,6 +125,19 @@
         class="relative z-10 mx-auto flex h-screen max-w-[1600px] flex-col lg:grid lg:grid-cols-[320px_minmax(0,1fr)]"
       >
         <div id="sidebar-root"></div>
+        <!-- Theme Toggle Button -->
+        <button
+          data-theme-toggle
+          onclick="ThemeManager.toggle()"
+          class="fixed top-4 right-4 z-50 p-2 rounded-xl bg-slate-800/80 backdrop-blur-xl border border-slate-700 text-white hover:bg-slate-700 transition-all duration-200 hover:scale-105"
+          aria-label="Toggle theme"
+        >
+          <span class="theme-icon">
+            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
+            </svg>
+          </span>
+        </button>
         <main
           class="flex h-screen flex-1 items-start justify-center overflow-y-auto px-4 py-6 sm:px-6 lg:px-8"
         >
@@ -139,33 +166,49 @@
       </div>
     </div>
     <script>
-      const storedTheme = localStorage.getItem("theme");
-      if (storedTheme === "light")
-        document.documentElement.classList.remove("dark");
-      else document.documentElement.classList.add("dark");
       async function loadHistory() {
         try {
-          const res = await fetch("/api/history");
-          const j = await res.json();
+          const res = await APIClient.get("/api/history");
           const el = document.getElementById("history-list");
-          const entries = (j && j.entries) || [];
+          const entries = (res && res.entries) || [];
+          
           if (entries.length === 0) {
-            el.innerHTML = '<div class="text-slate-400">No history yet.</div>';
+            el.innerHTML = `
+              <div class="flex flex-col items-center justify-center py-12 space-y-4">
+                <div class="text-4xl">📜</div>
+                <p class="text-slate-400">No history yet</p>
+                <a href="generate.html" class="text-indigo-400 hover:text-indigo-300 transition-colors">
+                  Start your first generation →
+                </a>
+              </div>
+            `;
             return;
           }
+          
           el.innerHTML = entries
-            .map(
-              (e) =>
-                `<div class="p-3 bg-slate-800 rounded mb-2"><div class=\"text-xs text-slate-400\">${e.time || ""}</div><div class=\"font-semibold\">${e.title || e.summary || "Run"}</div><div class=\"text-xs text-slate-400\">${e.detail || ""}</div></div>`,
-            )
+            .map((e, index) => `
+              <div class="p-4 bg-slate-800/50 rounded-xl border border-slate-700 hover:border-slate-600 transition-all duration-200 mb-2 animate-slide-in" style="animation-delay: ${index * 50}ms">
+                <div class="text-xs text-slate-400 mb-1">${DateFormatter.formatRelative(e.time)}</div>
+                <div class="font-semibold text-white">${e.title || e.summary || "Run"}</div>
+                <div class="text-xs text-slate-400 mt-1">${e.detail || ""}</div>
+              </div>
+            `)
             .join("");
         } catch (e) {
-          document.getElementById("history-list").textContent =
-            "Failed to load history";
+          document.getElementById("history-list").innerHTML = `
+            <div class="flex flex-col items-center justify-center py-12 space-y-4">
+              <div class="text-4xl">⚠️</div>
+              <p class="text-slate-400">Failed to load history</p>
+              <button onclick="loadHistory()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-sm font-medium transition-colors">
+                Retry
+              </button>
+            </div>
+          `;
+          NotificationManager.show("Failed to load history", "error");
         }
       }
       loadHistory();
     </script>
-    <script src="/static/sidebar-loader.js" defer></script>
+    <script src="/static/sidebar-loader.js"></script>
   </body>
 </html>

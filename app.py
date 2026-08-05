@@ -541,12 +541,12 @@ app.add_middleware(
 )
 
 # Secure CORS configuration - only allow specific origins in production
-cors_origins = app_settings.CORS_ORIGINS if app_settings.CORS_ORIGINS != ["*"] else ["http://localhost:7860", "http://127.0.0.1:7860"]
+cors_origins = app_settings.CORS_ORIGINS if app_settings.CORS_ORIGINS != ["*"] else ["http://localhost:7860", "http://127.0.0.1:7860", "http://localhost:8000", "http://127.0.0.1:8000"]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "OPTIONS"],  # Restrict methods
+    allow_methods=["GET", "POST", "OPTIONS", "PUT", "DELETE"],  # Restrict methods
     allow_headers=["Content-Type", "Authorization", "X-Request-ID"],  # Restrict headers
 )
 
@@ -677,6 +677,26 @@ def register_fastapi_routes(app: FastAPI):
     @app.get("/index.html")
     async def page_index_html():
         return FileResponse(path="ui/index.html", media_type="text/html")
+    
+    @app.get("/web-ui")
+    async def web_ui_redirect():
+        return FileResponse(path="ui/index.html", media_type="text/html")
+    
+    @app.get("/gradio")
+    async def gradio_redirect():
+        # This will trigger the Gradio interface
+        return FileResponse(path="ui/gradio-placeholder.html", media_type="text/html")
+    
+    # Serve UI static files
+    @app.get("/ui/{file_path:path}")
+    async def serve_ui_files(file_path: str):
+        ui_path = Path("ui") / file_path
+        if ui_path.exists() and ui_path.is_file():
+            return FileResponse(path=str(ui_path))
+        raise HTTPException(status_code=404, detail="File not found")
+    
+    # Serve UI files directly (for --serve-ui mode)
+    app.mount("/static", StaticFiles(directory="ui"), name="static")
 
     @app.get("/health")
     async def health_check():
@@ -1038,6 +1058,21 @@ def register_fastapi_routes(app: FastAPI):
         return {
             "docs_url": "https://github.com/abdi7d/ready-tensor-publication-explorer-rag-chatbot",
             "contact": "abdid.yadata@gmail.com"
+        }
+
+    @app.get("/api/about")
+    async def api_about():
+        return {
+            "name": "Publication Assistant for AI Projects",
+            "version": "1.1.0",
+            "description": "Production-grade publication assistant for AI projects using intelligent multi-agent collaboration.",
+            "features": [
+                "Repository Analysis",
+                "Metadata Generation", 
+                "Content Improvement",
+                "Fact Checking",
+                "Multi-Agent Orchestration"
+            ]
         }
 
     if UI_DIR.exists():

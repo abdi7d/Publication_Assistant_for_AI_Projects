@@ -16,8 +16,9 @@ Includes:
  - WebSearchTool
  - KeywordExtractor
  - RAGRetriever
- 
  - ArxivScholarTool
+ - ContextEnrichmentTool (new)
+ - RepositoryGroundedGenerator (new)
 """
 
 from .repo_parser import RepoParser
@@ -26,10 +27,18 @@ from .keyword_extractor import KeywordExtractor
 from .rag_retriever import RAGRetriever
 from .arxiv_scholar import ArxivScholarTool
 
+# Enhanced tools
+from .context_enrichment import ContextEnrichmentTool, EnrichedContext
+from .repository_grounded_generator import RepositoryGroundedGenerator, RepositoryEvidence
+
 __all__ = [
     "RepoParser",
     "WebSearchTool",
     "KeywordExtractor",
     "RAGRetriever",
     "ArxivScholarTool",
+    "ContextEnrichmentTool",
+    "EnrichedContext",
+    "RepositoryGroundedGenerator",
+    "RepositoryEvidence",
 ]

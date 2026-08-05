@@ -232,22 +232,11 @@
     </div>
 
     <script>
-      // Initialize theme
-      const storedTheme = localStorage.getItem('theme');
-      if (storedTheme === 'light') {
-        document.documentElement.classList.remove('dark');
-      } else {
-        document.documentElement.classList.add('dark');
-      }
-
       function selectInterface(interface) {
         if (interface === 'web') {
           window.location.href = '/generate.html';
         } else if (interface === 'gradio') {
-          window.location.href = 'gradio-placeholder.html';
-        }
-      }
-    </script>
+          // For Gradio, we'll need to trigger the Gradio launch
           // This will be handled by modifying the backend
           window.location.href = '/gradio';
         }

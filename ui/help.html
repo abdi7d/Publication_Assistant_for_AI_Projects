@@ -111,6 +111,19 @@
         class="relative z-10 mx-auto flex h-screen max-w-[1600px] flex-col lg:grid lg:grid-cols-[320px_minmax(0,1fr)]"
       >
         <div id="sidebar-root"></div>
+        <!-- Theme Toggle Button -->
+        <button
+          data-theme-toggle
+          onclick="ThemeManager.toggle()"
+          class="fixed top-4 right-4 z-50 p-2 rounded-xl bg-slate-800/80 backdrop-blur-xl border border-slate-700 text-white hover:bg-slate-700 transition-all duration-200 hover:scale-105"
+          aria-label="Toggle theme"
+        >
+          <span class="theme-icon">
+            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
+            </svg>
+          </span>
+        </button>
         <main
           class="flex h-screen flex-1 items-start justify-center overflow-y-auto px-4 py-6 sm:px-6 lg:px-8"
         >
@@ -138,19 +151,76 @@
         </main>
       </div>
     </div>
+    <script src="/static/shared.js"></script>
     <script>
-      const storedTheme = localStorage.getItem("theme");
-      if (storedTheme === "light")
-        document.documentElement.classList.remove("dark");
-      else document.documentElement.classList.add("dark");
       async function load() {
         try {
-          const res = await fetch("/api/help");
-          const j = await res.json();
-          document.getElementById("help").innerHTML =
-            `<div class=\"text-sm\">Docs: <a class=\"text-indigo-400\" href=\"${j.docs_url}\">${j.docs_url}</a></div><div class=\"text-sm mt-2\">Contact: ${j.contact}</div>`;
+          const res = await APIClient.get("/api/help");
+          const el = document.getElementById("help");
+          
+          if (!res) {
+            el.innerHTML = `
+              <div class="flex flex-col items-center justify-center py-12 space-y-4">
+                <div class="text-4xl">❓</div>
+                <p class="text-slate-400">No help documentation available</p>
+                <a href="generate.html" class="text-indigo-400 hover:text-indigo-300 transition-colors">
+                  Start using the application →
+                </a>
+              </div>
+            `;
+            return;
+          }
+          
+          // Format help content nicely
+          let html = '<div class="space-y-6">';
+          
+          if (res.docs_url) {
+            html += `
+              <div class="p-4 bg-slate-800/50 rounded-xl border border-slate-700">
+                <div class="font-semibold text-white mb-2">📚 Documentation</div>
+                <a href="${res.docs_url}" target="_blank" class="text-indigo-400 hover:text-indigo-300 transition-colors">
+                  ${res.docs_url}
+                </a>
+              </div>
+            `;
+          }
+          
+          if (res.contact) {
+            html += `
+              <div class="p-4 bg-slate-800/50 rounded-xl border border-slate-700">
+                <div class="font-semibold text-white mb-2">📧 Contact</div>
+                <div class="text-xs text-slate-400">${res.contact}</div>
+              </div>
+            `;
+          }
+          
+          if (res.faq && res.faq.length > 0) {
+            html += '<div class="space-y-3">';
+            html += '<div class="font-semibold text-white mb-3">❓ Frequently Asked Questions</div>';
+            res.faq.forEach((faq, index) => {
+              html += `
+                <div class="p-4 bg-slate-800/50 rounded-xl border border-slate-700">
+                  <div class="font-medium text-white">${faq.question}</div>
+                  <div class="text-xs text-slate-400 mt-2">${faq.answer}</div>
+                </div>
+              `;
+            });
+            html += '</div>';
+          }
+          
+          html += '</div>';
+          el.innerHTML = html;
         } catch (e) {
-          document.getElementById("help").textContent = "Failed to load help";
+          document.getElementById("help").innerHTML = `
+            <div class="flex flex-col items-center justify-center py-12 space-y-4">
+              <div class="text-4xl">⚠️</div>
+              <p class="text-slate-400">Failed to load help</p>
+              <button onclick="load()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-sm font-medium transition-colors">
+                Retry
+              </button>
+            </div>
+          `;
+          NotificationManager.show("Failed to load help", "error");
         }
       }
       load();

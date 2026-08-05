@@ -111,6 +111,19 @@
         class="relative z-10 mx-auto flex h-screen max-w-[1600px] flex-col lg:grid lg:grid-cols-[320px_minmax(0,1fr)]"
       >
         <div id="sidebar-root"></div>
+        <!-- Theme Toggle Button -->
+        <button
+          data-theme-toggle
+          onclick="ThemeManager.toggle()"
+          class="fixed top-4 right-4 z-50 p-2 rounded-xl bg-slate-800/80 backdrop-blur-xl border border-slate-700 text-white hover:bg-slate-700 transition-all duration-200 hover:scale-105"
+          aria-label="Toggle theme"
+        >
+          <span class="theme-icon">
+            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
+            </svg>
+          </span>
+        </button>
         <main
           class="flex h-screen flex-1 items-start justify-center overflow-y-auto px-4 py-6 sm:px-6 lg:px-8"
         >
@@ -141,19 +154,12 @@
       </div>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="/static/shared.js"></script>
     <script>
-      const storedTheme = localStorage.getItem("theme");
-      if (storedTheme === "light")
-        document.documentElement.classList.remove("dark");
-      else document.documentElement.classList.add("dark");
-
       async function load() {
         try {
-          const res = await fetch("/api/analytics");
-          const j = await res.json();
-          const ctx = document
-            .getElementById("analyticsChart")
-            .getContext("2d");
+          const res = await APIClient.get("/api/analytics");
+          const ctx = document.getElementById("analyticsChart").getContext("2d");
           new Chart(ctx, {
             type: "bar",
             data: {
@@ -161,16 +167,52 @@
               datasets: [
                 {
                   label: "Count",
-                  data: [j.projects_count || 0],
+                  data: [res.projects_count || 0],
                   backgroundColor: ["#6366f1"],
                 },
               ],
             },
-            options: { responsive: true, maintainAspectRatio: false },
+            options: { 
+              responsive: true, 
+              maintainAspectRatio: false,
+              plugins: {
+                legend: {
+                  labels: {
+                    color: '#cbd5e1'
+                  }
+                }
+              },
+              scales: {
+                y: {
+                  ticks: {
+                    color: '#94a3b8'
+                  },
+                  grid: {
+                    color: 'rgba(148, 163, 184, 0.1)'
+                  }
+                },
+                x: {
+                  ticks: {
+                    color: '#94a3b8'
+                  },
+                  grid: {
+                    color: 'rgba(148, 163, 184, 0.1)'
+                  }
+                }
+              }
+            }
           });
         } catch (e) {
-          document.getElementById("analytics").textContent =
-            "Failed to load analytics";
+          document.getElementById("analytics").innerHTML = `
+            <div class="flex flex-col items-center justify-center py-12 space-y-4">
+              <div class="text-4xl">📊</div>
+              <p class="text-slate-400">Failed to load analytics</p>
+              <button onclick="load()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-sm font-medium transition-colors">
+                Retry
+              </button>
+            </div>
+          `;
+          NotificationManager.show("Failed to load analytics", "error");
         }
       }
       load();
