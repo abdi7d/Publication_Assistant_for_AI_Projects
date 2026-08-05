@@ -757,10 +757,6 @@ def register_fastapi_routes(app: FastAPI):
     async def page_analytics():
         return FileResponse(path="ui/analytics.html", media_type="text/html")
 
-    @app.get("/results.html")
-    async def page_results():
-        return FileResponse(path="ui/results.html", media_type="text/html")
-
     @app.get("/projects.html")
     async def page_projects():
         return FileResponse(path="ui/projects.html", media_type="text/html")

@@ -240,17 +240,52 @@
         document.documentElement.classList.add('dark');
       }
 
-      function selectInterface(interface) {
+      async function selectInterface(interface) {
         if (interface === 'web') {
           window.location.href = '/generate.html';
-        } else if (interface === 'gradio') {
-          window.location.href = 'gradio-placeholder.html';
+          return;
+        }
+
+        if (interface === 'gradio') {
+          const ports = [7860, 7861, 7862];
+          const baseUrls = ports.map((port) => `http://127.0.0.1:${port}/`);
+          const target = await findAvailableGradioUrl(baseUrls);
+          
+          if (target) {
+            window.location.href = target;
+          } else {
+            // Gradio not running, go to placeholder page which will show error and redirect back
+            window.location.href = '/gradio';
+          }
         }
       }
-    </script>
-          // This will be handled by modifying the backend
-          window.location.href = '/gradio';
+
+      async function findAvailableGradioUrl(urls) {
+        const checks = urls.map((url) => {
+          return fetchWithTimeout(url + 'favicon.ico', 2000, { mode: 'no-cors' })
+            .then(() => url)
+            .catch(() => Promise.reject());
+        });
+        try {
+          return await Promise.any(checks);
+        } catch {
+          return null;
         }
+      }
+
+      function fetchWithTimeout(url, timeoutMs, options = {}) {
+        return new Promise((resolve, reject) => {
+          const timer = setTimeout(() => reject(new Error('timeout')), timeoutMs);
+          fetch(url, options)
+            .then((response) => {
+              clearTimeout(timer);
+              resolve(response);
+            })
+            .catch((err) => {
+              clearTimeout(timer);
+              reject(err);
+            });
+        });
       }
 
       // Add keyboard shortcuts

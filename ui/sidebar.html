@@ -1,10 +1,10 @@
 <aside
-  class="hidden lg:sticky lg:top-0 lg:flex lg:h-screen lg:max-h-screen lg:flex-col overflow-hidden border-r border-white/10 bg-slate-950/80 backdrop-blur-xl"
+  class="hidden lg:flex lg:h-screen lg:max-h-screen lg:flex-col overflow-hidden border-r border-white/10 bg-slate-950/80 backdrop-blur-xl flex-shrink-0"
 >
-  <div class="px-6 py-5 mt-12">
+  <div class="px-6 py-6">
     <div class="flex items-center gap-3">
       <div
-        class="grid h-12 w-12 place-items-center rounded-3xl bg-gradient-to-br from-indigo-500 to-cyan-400 shadow-[0_24px_80px_-40px_rgba(56,189,248,0.65)]"
+        class="grid h-12 w-12 place-items-center rounded-2xl bg-gradient-to-br from-indigo-500 to-cyan-400 shadow-[0_24px_80px_-40px_rgba(56,189,248,0.65)] transition-transform hover:scale-105"
       >
         <svg
           class="h-6 w-6 text-white"
@@ -29,17 +29,17 @@
       </div>
     </div>
   </div>
-  <nav class="flex-1 space-y-2 px-4 pb-4">
+  <nav class="flex-1 space-y-1 px-3 py-4 overflow-y-auto">
     <a
-      class="flex items-center gap-3 rounded-3xl bg-slate-900/70 px-4 py-3 text-slate-100 transition hover:bg-white/10"
+      class="group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 hover:bg-white/5"
       href="index.html"
       data-nav="home"
     >
       <span
-        class="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-800 text-sky-300"
+        class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-slate-800/50 text-slate-400 transition-all duration-200 group-hover:bg-indigo-500/20 group-hover:text-indigo-400"
       >
         <svg
-          class="h-5 w-5"
+          class="h-4.5 w-4.5"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -52,18 +52,18 @@
           ></path>
         </svg>
       </span>
-      <span class="font-medium">Home</span>
+      <span class="text-slate-300 transition-colors group-hover:text-white">Home</span>
     </a>
     <a
-      class="flex items-center gap-3 rounded-3xl px-4 py-3 text-slate-300 transition hover:bg-white/10 hover:text-white"
+      class="group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 hover:bg-white/5"
       href="generate.html"
       data-nav="generate"
     >
       <span
-        class="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-800 text-sky-400"
+        class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-slate-800/50 text-slate-400 transition-all duration-200 group-hover:bg-indigo-500/20 group-hover:text-indigo-400"
       >
         <svg
-          class="h-5 w-5"
+          class="h-4.5 w-4.5"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -76,42 +76,18 @@
           ></path>
         </svg>
       </span>
-      <span class="font-medium">Generate Article</span>
+      <span class="text-slate-300 transition-colors group-hover:text-white">Generate Article</span>
     </a>
     <a
-      class="flex items-center gap-3 rounded-3xl px-4 py-3 text-slate-300 transition hover:bg-white/10 hover:text-white"
-      href="results.html"
-      data-nav="results"
-    >
-      <span
-        class="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-800 text-violet-300"
-      >
-        <svg
-          class="h-5 w-5"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 00-2 2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-          ></path>
-        </svg>
-      </span>
-      <span class="font-medium">Results</span>
-    </a>
-    <a
-      class="flex items-center gap-3 rounded-3xl px-4 py-3 text-slate-300 transition hover:bg-white/10 hover:text-white"
+      class="group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 hover:bg-white/5"
       href="projects.html"
       data-nav="projects"
     >
       <span
-        class="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-800 text-cyan-300"
+        class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-slate-800/50 text-slate-400 transition-all duration-200 group-hover:bg-indigo-500/20 group-hover:text-indigo-400"
       >
         <svg
-          class="h-5 w-5"
+          class="h-4.5 w-4.5"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -124,18 +100,18 @@
           ></path>
         </svg>
       </span>
-      <span class="font-medium">Projects</span>
+      <span class="text-slate-300 transition-colors group-hover:text-white">Projects</span>
     </a>
     <a
-      class="flex items-center gap-3 rounded-3xl px-4 py-3 text-slate-300 transition hover:bg-white/10 hover:text-white"
+      class="group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 hover:bg-white/5"
       href="history.html"
       data-nav="history"
     >
       <span
-        class="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-800 text-emerald-300"
+        class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-slate-800/50 text-slate-400 transition-all duration-200 group-hover:bg-indigo-500/20 group-hover:text-indigo-400"
       >
         <svg
-          class="h-5 w-5"
+          class="h-4.5 w-4.5"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -148,18 +124,18 @@
           ></path>
         </svg>
       </span>
-      <span class="font-medium">History</span>
+      <span class="text-slate-300 transition-colors group-hover:text-white">History</span>
     </a>
     <a
-      class="flex items-center gap-3 rounded-3xl px-4 py-3 text-slate-300 transition hover:bg-white/10 hover:text-white"
+      class="group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 hover:bg-white/5"
       href="saved.html"
       data-nav="saved"
     >
       <span
-        class="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-800 text-fuchsia-300"
+        class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-slate-800/50 text-slate-400 transition-all duration-200 group-hover:bg-indigo-500/20 group-hover:text-indigo-400"
       >
         <svg
-          class="h-5 w-5"
+          class="h-4.5 w-4.5"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -172,18 +148,18 @@
           ></path>
         </svg>
       </span>
-      <span class="font-medium">Saved</span>
+      <span class="text-slate-300 transition-colors group-hover:text-white">Saved</span>
     </a>
     <a
-      class="flex items-center gap-3 rounded-3xl px-4 py-3 text-slate-300 transition hover:bg-white/10 hover:text-white"
+      class="group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 hover:bg-white/5"
       href="analytics.html"
       data-nav="analytics"
     >
       <span
-        class="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-800 text-amber-300"
+        class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-slate-800/50 text-slate-400 transition-all duration-200 group-hover:bg-indigo-500/20 group-hover:text-indigo-400"
       >
         <svg
-          class="h-5 w-5"
+          class="h-4.5 w-4.5"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -196,18 +172,18 @@
           ></path>
         </svg>
       </span>
-      <span class="font-medium">Analytics</span>
+      <span class="text-slate-300 transition-colors group-hover:text-white">Analytics</span>
     </a>
     <a
-      class="flex items-center gap-3 rounded-3xl px-4 py-3 text-slate-300 transition hover:bg-white/10 hover:text-white"
+      class="group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 hover:bg-white/5"
       href="settings.html"
       data-nav="settings"
     >
       <span
-        class="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-800 text-pink-300"
+        class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-slate-800/50 text-slate-400 transition-all duration-200 group-hover:bg-indigo-500/20 group-hover:text-indigo-400"
       >
         <svg
-          class="h-5 w-5"
+          class="h-4.5 w-4.5"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -220,18 +196,18 @@
           ></path>
         </svg>
       </span>
-      <span class="font-medium">Settings</span>
+      <span class="text-slate-300 transition-colors group-hover:text-white">Settings</span>
     </a>
     <a
-      class="flex items-center gap-3 rounded-3xl px-4 py-3 text-slate-300 transition hover:bg-white/10 hover:text-white"
+      class="group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 hover:bg-white/5"
       href="help.html"
       data-nav="help"
     >
       <span
-        class="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-800 text-rose-300"
+        class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-slate-800/50 text-slate-400 transition-all duration-200 group-hover:bg-indigo-500/20 group-hover:text-indigo-400"
       >
         <svg
-          class="h-5 w-5"
+          class="h-4.5 w-4.5"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -244,9 +220,26 @@
           ></path>
         </svg>
       </span>
-      <span class="font-medium">Help</span>
+      <span class="text-slate-300 transition-colors group-hover:text-white">Help</span>
     </a>
   </nav>
+  
+  <!-- Theme Toggle in Sidebar -->
+  <div class="px-3 py-4 border-t border-white/10">
+    <button
+      onclick="if(typeof ThemeManager !== 'undefined') ThemeManager.toggle();"
+      class="group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 hover:bg-white/5 w-full"
+    >
+      <span
+        class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-slate-800/50 text-slate-400 transition-all duration-200 group-hover:bg-indigo-500/20 group-hover:text-indigo-400"
+      >
+        <svg class="h-4.5 w-4.5 theme-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
+        </svg>
+      </span>
+      <span class="text-slate-300 transition-colors group-hover:text-white">Toggle Theme</span>
+    </button>
+  </div>
 </aside>
 
 <script>
@@ -260,12 +253,21 @@
       if (nav === currentPage.replace('.html', '') || 
           (currentPage === '' && nav === 'home') ||
           (currentPage === 'index.html' && nav === 'home')) {
-        link.classList.add('bg-slate-900/70', 'text-slate-100');
+        link.classList.add('bg-indigo-500/10', 'text-white');
         link.classList.remove('text-slate-300');
+        link.querySelector('span').classList.add('bg-indigo-500/20', 'text-indigo-400');
+        link.querySelector('span').classList.remove('bg-slate-800/50', 'text-slate-400');
       } else {
-        link.classList.remove('bg-slate-900/70', 'text-slate-100');
+        link.classList.remove('bg-indigo-500/10', 'text-white');
         link.classList.add('text-slate-300');
+        link.querySelector('span').classList.remove('bg-indigo-500/20', 'text-indigo-400');
+        link.querySelector('span').classList.add('bg-slate-800/50', 'text-slate-400');
       }
     });
+    
+    // Initialize theme icon in sidebar
+    if (typeof ThemeManager !== 'undefined') {
+      ThemeManager.updateToggleIcons();
+    }
   });
 </script>

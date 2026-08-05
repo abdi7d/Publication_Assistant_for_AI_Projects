@@ -63,11 +63,32 @@
       #sidebar-root > * {
         height: 100vh;
       }
+      .content-section {
+        margin-bottom: 2rem;
+      }
+      .section-card {
+        background: rgba(15, 23, 42, 0.6);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        backdrop-filter: blur(20px);
+        border-radius: 1rem;
+        padding: 1.5rem;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 2px 8px rgba(0, 0, 0, 0.2);
+        transition: all 0.3s ease;
+      }
+      .section-card:hover {
+        border-color: rgba(255, 255, 255, 0.12);
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.3);
+      }
       .glass-card {
-        background: rgba(15, 23, 42, 0.72);
-        border: 1px solid rgba(148, 163, 184, 0.14);
-        backdrop-filter: blur(18px);
-        box-shadow: 0 28px 80px -45px rgba(15, 23, 42, 0.85);
+        background: rgba(15, 23, 42, 0.6);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        backdrop-filter: blur(20px);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 2px 8px rgba(0, 0, 0, 0.2);
+        transition: all 0.3s ease;
+      }
+      .glass-card:hover {
+        border-color: rgba(255, 255, 255, 0.12);
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.3);
       }
       .soft-badge {
         display: inline-flex;
@@ -122,44 +143,24 @@
         class="absolute inset-0 bg-gradient-to-t from-slate-950/95 via-slate-950/45 to-transparent"
       ></div>
       <div
-        class="relative z-10 mx-auto flex h-screen max-w-[1600px] flex-col lg:grid lg:grid-cols-[320px_minmax(0,1fr)]"
+        class="relative z-10 flex h-screen max-w-full"
       >
         <div id="sidebar-root"></div>
-        <!-- Theme Toggle Button -->
-        <button
-          data-theme-toggle
-          onclick="ThemeManager.toggle()"
-          class="fixed top-4 right-4 z-50 p-2 rounded-xl bg-slate-800/80 backdrop-blur-xl border border-slate-700 text-white hover:bg-slate-700 transition-all duration-200 hover:scale-105"
-          aria-label="Toggle theme"
-        >
-          <span class="theme-icon">
-            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
-            </svg>
-          </span>
-        </button>
         <main
-          class="flex h-screen flex-1 items-start justify-center overflow-y-auto px-4 py-6 sm:px-6 lg:px-8"
+          class="flex-1 h-screen overflow-y-auto"
         >
-          <div class="w-full max-w-5xl">
-            <div class="glass-card rounded-[28px] p-4 sm:p-6 lg:p-8">
-              <div class="mb-6 flex items-center justify-between gap-3">
-                <div>
-                  <div class="soft-badge">Projects</div>
-                  <h1 class="page-heading">Repository library</h1>
-                </div>
-                <a
-                  href="index.html"
-                  class="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-200 transition hover:bg-white/10"
-                  >Back</a
-                >
+          <div class="max-w-7xl mx-auto px-6 py-8">
+            <div class="mb-6 flex items-center justify-between gap-3">
+              <div>
+                <div class="soft-badge mb-3">Projects</div>
+                <h1 class="page-heading">Repository library</h1>
               </div>
-              <div
-                id="projects-list"
-                class="rounded-3xl border border-white/10 bg-slate-950/60 p-4 text-sm text-slate-200"
-              >
-                Loading projects...
-              </div>
+            </div>
+            <div
+              id="projects-list"
+              class="section-card text-sm text-slate-200"
+            >
+              Loading projects...
             </div>
           </div>
         </main>
@@ -189,14 +190,14 @@
           Object.keys(res).forEach((k, index) => {
             const p = res[k] || {};
             html += `
-              <li class="p-4 bg-slate-800/50 rounded-xl border border-slate-700 hover:border-slate-600 transition-all duration-200 flex justify-between items-center animate-slide-in" style="animation-delay: ${index * 50}ms">
+              <li class="p-4 bg-slate-800/30 rounded-xl border border-white/10 hover:border-white/20 transition-all duration-200 flex justify-between items-center animate-slide-in backdrop-blur-sm" style="animation-delay: ${index * 50}ms">
                 <div class="flex-1">
                   <div class="font-semibold text-white">${k}</div>
                   <div class="text-xs text-slate-400 mt-1 break-all">${p.repo_url || ""}</div>
                 </div>
                 <div class="flex gap-2">
-                  <button onclick="editProject('${k}')" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 rounded-lg text-xs font-medium transition-colors">Edit</button>
-                  <button onclick="deleteProject('${k}')" class="px-3 py-1.5 bg-red-600 hover:bg-red-500 rounded-lg text-xs font-medium transition-colors">Delete</button>
+                  <button onclick="editProject('${k}')" class="px-3 py-1.5 bg-slate-800/50 hover:bg-slate-700/50 text-slate-300 hover:text-white border border-white/10 rounded-lg text-xs font-medium transition-all">Edit</button>
+                  <button onclick="deleteProject('${k}')" class="px-3 py-1.5 bg-slate-800/50 hover:bg-slate-700/50 text-slate-300 hover:text-white border border-white/10 rounded-lg text-xs font-medium transition-all">Delete</button>
                 </div>
               </li>
             `;
