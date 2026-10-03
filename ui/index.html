@@ -1,0 +1,307 @@
+<!doctype html>
+<html class="dark" lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Publication Assistant - Interface Selection</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            fontFamily: { sans: ["Inter", "sans-serif"] },
+            colors: {
+              brand: {
+                navy: "#0f172a",
+                sidebar: "#0b1120",
+                card: "#1e293b",
+                surface: "#111827",
+                accent: "#6366f1",
+                border: "#334155",
+                muted: "#94a3b8",
+              },
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      html, body {
+        height: 100%;
+        overflow: hidden;
+      }
+      body {
+        background: #08111f;
+        color: #f8fafc;
+        font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+      }
+      .glass-card {
+        background: rgba(15, 23, 42, 0.72);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        backdrop-filter: blur(18px);
+        box-shadow: 0 28px 80px -45px rgba(15, 23, 42, 0.85);
+      }
+      .hero-shadow {
+        box-shadow: 0 40px 120px -40px rgba(15, 23, 42, 0.88);
+      }
+      .interface-card {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .interface-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 32px 100px -32px rgba(99, 102, 241, 0.3);
+      }
+    </style>
+  </head>
+  <body class="dark h-screen overflow-hidden">
+    <div class="relative h-screen overflow-hidden">
+      <div
+        class="absolute inset-0 bg-gradient-to-br from-[#08111F] via-[#0B132B] to-[#111827]"
+      ></div>
+      <div class="absolute inset-0 opacity-75">
+        <img
+          src="/assets/hero_bg.png"
+          alt="Hero background illustration"
+          class="h-full w-full object-cover object-center"
+          loading="lazy"
+        />
+      </div>
+      <div
+        class="absolute inset-0 bg-gradient-to-t from-slate-950/95 via-slate-950/45 to-transparent"
+      ></div>
+      
+      <div class="relative z-10 flex h-screen flex-col items-center justify-center px-4">
+        <div class="max-w-4xl w-full text-center space-y-8">
+          <!-- Logo & Title -->
+          <div class="space-y-4">
+            <div
+              class="inline-flex items-center gap-3 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs uppercase tracking-[0.35em] text-slate-200 shadow-[0_30px_90px_-90px_rgba(56,189,248,0.7)]"
+            >
+              <span
+                class="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-400 to-indigo-500 text-slate-950"
+              >✨</span
+              >
+              AI Powered Multi-Agent System
+            </div>
+            <h1
+              class="text-4xl font-semibold tracking-tight text-white sm:text-5xl lg:text-6xl"
+            >
+              Publication Assistant
+              <span
+                class="bg-gradient-to-r from-sky-300 via-indigo-400 to-purple-400 bg-clip-text text-transparent"
+              >for AI Projects</span
+            </h1>
+            <p class="max-w-2xl mx-auto text-sm leading-5 text-slate-300 sm:text-base">
+              Transform your GitHub repository into publication-ready documentation using intelligent multi-agent collaboration.
+            </p>
+          </div>
+
+          <!-- Interface Selection Cards -->
+          <div class="grid gap-6 md:grid-cols-2 max-w-3xl mx-auto">
+            <!-- Web UI Card -->
+            <button
+              onclick="selectInterface('web')"
+              class="interface-card glass-card rounded-3xl p-8 text-left w-full border-2 border-transparent hover:border-indigo-500/50"
+              aria-label="Launch Web UI"
+            >
+              <div class="flex items-start gap-4">
+                <div
+                  class="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-cyan-400 text-white shadow-lg"
+                >
+                  <svg class="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <div class="flex-1">
+                  <h3 class="text-xl font-semibold text-white mb-2">Web UI</h3>
+                  <p class="text-sm text-slate-400 mb-4">
+                    Modern, responsive web interface with real-time agent visualization and premium dashboard experience.
+                  </p>
+                  <div class="flex flex-wrap gap-2">
+                    <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-white/5 text-xs text-slate-300">
+                      <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" />
+                      </svg>
+                      Modern Design
+                    </span>
+                    <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-white/5 text-xs text-slate-300">
+                      <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" />
+                      </svg>
+                      Real-time Updates
+                    </span>
+                    <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-white/5 text-xs text-slate-300">
+                      <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" />
+                      </svg>
+                      Mobile Responsive
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </button>
+
+            <!-- Gradio UI Card -->
+            <button
+              onclick="selectInterface('gradio')"
+              class="interface-card glass-card rounded-3xl p-8 text-left w-full border-2 border-transparent hover:border-orange-500/50"
+              aria-label="Launch Gradio UI"
+            >
+              <div class="flex items-start gap-4">
+                <div
+                  class="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-500 to-pink-500 text-white shadow-lg"
+                >
+                  <svg class="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2v2a2 2 0 012 2v2a2 2 0 012 2v6a2 2 0 01-2 2H6a2 2 0 01-2-2v-6a2 2 0 012-2V4a2 2 0 012-2h12a2 2 0 012 2v2" />
+                  </svg>
+                </div>
+                <div class="flex-1">
+                  <h3 class="text-xl font-semibold text-white mb-2">Gradio UI</h3>
+                  <p class="text-sm text-slate-400 mb-4">
+                    Interactive machine learning interface with rapid prototyping and quick iteration capabilities.
+                  </p>
+                  <div class="flex flex-wrap gap-2">
+                    <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-white/5 text-xs text-slate-300">
+                      <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" />
+                      </svg>
+                      Quick Iteration
+                    </span>
+                    <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-white/5 text-xs text-slate-300">
+                      <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" />
+                      </svg>
+                      Interactive
+                    </span>
+                    <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-white/5 text-xs text-slate-300">
+                      <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" />
+                      </svg>
+                      ML-focused
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </button>
+          </div>
+
+          <!-- Feature Highlights -->
+          <div class="grid gap-4 sm:grid-cols-3 max-w-2xl mx-auto pt-4">
+            <div class="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+              <span class="text-indigo-400">
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+              </span>
+              <span class="text-sm text-slate-300">Multi-Agent Pipeline</span>
+            </div>
+            <div class="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+              <span class="text-sky-400">
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 00-2 2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </span>
+              <span class="text-sm text-slate-300">Publication-Ready Output</span>
+            </div>
+            <div class="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+              <span class="text-purple-400">
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </span>
+              <span class="text-sm text-slate-300">AI-Powered Analysis</span>
+            </div>
+          </div>
+
+          <!-- Footer -->
+          <div class="pt-8 text-center">
+            <p class="text-xs text-slate-500">
+              Both interfaces share the same backend and produce identical results
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Initialize theme
+      const storedTheme = localStorage.getItem('theme');
+      if (storedTheme === 'light') {
+        document.documentElement.classList.remove('dark');
+      } else {
+        document.documentElement.classList.add('dark');
+      }
+
+      async function selectInterface(interface) {
+        if (interface === 'web') {
+          window.location.href = '/generate.html';
+          return;
+        }
+
+        if (interface === 'gradio') {
+          const ports = [7860, 7861, 7862];
+          const baseUrls = ports.map((port) => `http://127.0.0.1:${port}/`);
+          const target = await findAvailableGradioUrl(baseUrls);
+          
+          if (target) {
+            window.location.href = target;
+          } else {
+            // Gradio not running, go to placeholder page which will show error and redirect back
+            window.location.href = '/gradio';
+          }
+        }
+      }
+
+      async function findAvailableGradioUrl(urls) {
+        // Try each URL sequentially for better browser compatibility
+        for (var i = 0; i < urls.length; i++) {
+          try {
+            var response = await fetchWithTimeout(urls[i], 2000, { mode: 'cors' });
+            if (response && response.ok) {
+              return urls[i];
+            }
+          } catch (e) {
+            // Continue to next URL
+            continue;
+          }
+        }
+        return null;
+      }
+
+      function fetchWithTimeout(url, timeoutMs, options) {
+        return new Promise(function(resolve, reject) {
+          var timer = setTimeout(function() {
+            reject(new Error('timeout'));
+          }, timeoutMs);
+          
+          fetch(url, options)
+            .then(function(response) {
+              clearTimeout(timer);
+              resolve(response);
+            })
+            .catch(function(err) {
+              clearTimeout(timer);
+              reject(err);
+            });
+        });
+      }
+
+      // Add keyboard shortcuts
+      document.addEventListener('keydown', (e) => {
+        if (e.key === '1' || e.key === 'w') {
+          selectInterface('web');
+        } else if (e.key === '2' || e.key === 'g') {
+          selectInterface('gradio');
+        }
+      });
+    </script>
+  </body>
+</html>
